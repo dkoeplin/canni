@@ -8,7 +8,6 @@
 
 namespace {
 
-// Build a minimal 2D string tensor from rows of {date, balance} pairs.
 nvl::Tensor<2, std::string> make_tensor(const std::vector<std::vector<std::string>> &rows) {
     const I64 nrows = static_cast<I64>(rows.size());
     const I64 ncols = rows.empty() ? 0 : static_cast<I64>(rows[0].size());
@@ -21,18 +20,16 @@ nvl::Tensor<2, std::string> make_tensor(const std::vector<std::vector<std::strin
 
 } // namespace
 
-TEST(Account, ParseBasic) {
+TEST(Account, ParseSetsNameAndBalance) {
     const auto data = make_tensor({
         {"01/01/2024", "1000.00"},
         {"02/01/2024", "1100.00"},
     });
     const auto account = Cash(data, "Test", Interest::Simple(0.0), /*balance*/1);
     EXPECT_EQ(account.name(), "Test");
-
-    const auto dates = account.dates();
-    ASSERT_EQ(dates.size(), 2);
-    EXPECT_EQ(*account.get(Day("01/01/2024")), USD::round(1000.00));
-    EXPECT_EQ(*account.get(Day("02/01/2024")), USD::round(1100.00));
+    // balance_ is initialized from the last row
+    EXPECT_EQ(account.balance(), USD::round(1100.00));
+    EXPECT_EQ(account.principal(), USD::round(1100.00));
 }
 
 TEST(Account, ParseSkipsInvalidDates) {
@@ -42,7 +39,6 @@ TEST(Account, ParseSkipsInvalidDates) {
     });
     const auto account = Cash(data, "Test", Interest::Simple(0.0), /*balance*/1);
     EXPECT_EQ(account.dates().size(), 1);
-    EXPECT_TRUE(account.get(Day("01/01/2024")).has_value());
 }
 
 TEST(Account, ParseWithPrincipal) {
@@ -50,55 +46,56 @@ TEST(Account, ParseWithPrincipal) {
         {"01/01/2024", "1200.00", "1000.00"},
     });
     const auto account = Cash(data, "Test", Interest::Simple(0.0), /*balance*/1, /*principal*/2);
-    EXPECT_EQ(*account.get(Day("01/01/2024")), USD::round(1200.00));
+    EXPECT_EQ(account.balance(), USD::round(1200.00));
+    EXPECT_EQ(account.principal(), USD::round(1000.00));
 }
 
-TEST(Account, GetReturnsNoneForMissingDate) {
-    const auto data = make_tensor({
-        {"01/01/2024", "1000.00"},
-    });
-    const auto account = Cash(data, "Test", Interest::Simple(0.0), /*balance*/1);
-    EXPECT_FALSE(account.get(Day("06/15/2024")).has_value());
-}
-
-TEST(Account, ProjectionLinearInterpolation) {
-    // With two known points, projection between them should be linear.
+TEST(Account, HistoricalGetLookup) {
     const auto data = make_tensor({
         {"01/01/2024", "1000.00"},
         {"03/01/2024", "1060.00"},
     });
     const auto account = Cash(data, "Test", Interest::Simple(0.0), /*balance*/1);
-
-    // Feb 1 is between Jan 1 and Mar 1 (31 days in, 60 days total span)
-    // slope = 60/59 days ~ $1.017/day, so after 31 days ~ $1031.53
-    const USD projected = account[Day("02/01/2024")];
-    EXPECT_GT(projected, USD::dollars(1025));
-    EXPECT_LT(projected, USD::dollars(1040));
+    // get() does a history lookup (most recent at or before date)
+    const auto jan = account.get(Day("01/01/2024"));
+    EXPECT_EQ(jan.balance, USD::round(1000.00));
+    const auto feb = account.get(Day("02/01/2024")); // between entries → returns Jan
+    EXPECT_EQ(feb.balance, USD::round(1000.00));
+    const auto mar = account.get(Day("03/01/2024"));
+    EXPECT_EQ(mar.balance, USD::round(1060.00));
 }
 
-TEST(Account, ProjectionInterestExtrapolation) {
-    // Beyond last known point, uses interest model.
+TEST(Account, GetBeforeFirstEntryReturnsEmpty) {
     const auto data = make_tensor({
-        {"01/01/2024", "1000.00"},
-    });
-    const auto account = Cash(data, "Test", Interest::Monthly(0.12), /*balance*/1);
-
-    // One year out should be close to 1000 * 1.12 = $1120
-    const USD projected = account[Day("01/01/2025")];
-    EXPECT_GT(projected, USD::dollars(1115));
-    EXPECT_LT(projected, USD::dollars(1125));
-}
-
-TEST(Account, ProjectionMemoized) {
-    const auto data = make_tensor({
-        {"01/01/2024", "1000.00"},
-        {"03/01/2024", "1060.00"},
+        {"03/01/2024", "1000.00"},
     });
     const auto account = Cash(data, "Test", Interest::Simple(0.0), /*balance*/1);
+    const auto e = account.get(Day("01/01/2024")); // before any entry
+    EXPECT_EQ(e.balance, 0_USD);
+    EXPECT_EQ(e.principal, 0_USD);
+}
 
-    const USD first  = account[Day("02/01/2024")];
-    const USD second = account[Day("02/01/2024")];
-    EXPECT_EQ(first, second);
+TEST(Account, AdvanceAppliesInterest) {
+    const auto data = make_tensor({
+        {"01/01/2024", "1000.00"},
+    });
+    auto account = Cash(data, "Test", Interest::Monthly(0.12), /*balance*/1);
+    Taxes taxes;
+    account.advance(taxes, Day("01/01/2024"), Day("01/01/2025"));
+    // 12% yearly ≈ $1120 after one year
+    EXPECT_GT(account.balance(), USD::dollars(1115));
+    EXPECT_LT(account.balance(), USD::dollars(1125));
+}
+
+TEST(Account, CloneIsIndependent) {
+    const auto data = make_tensor({{"01/01/2024", "1000.00"}});
+    auto account = Cash(data, "Test", Interest::Simple(0.0), /*balance*/1);
+    auto cloned = account.clone();
+    Taxes taxes;
+    account.deposit(Day("01/01/2024"), 500_USD);
+    // Clone should not be affected
+    EXPECT_EQ(account.balance(), USD::dollars(1500));
+    EXPECT_EQ(cloned->balance(), USD::dollars(1000));
 }
 
 TEST(Account, Dates) {

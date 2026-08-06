@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string_view>
+#include <vector>
 
 #include "invest/account/Account.h"
 #include "invest/event/Event.h"
@@ -8,40 +9,39 @@
 #include "invest/Taxes.h"
 #include "invest/USD.h"
 
-/**
- * @class Accounts
- * @brief Holds groups of accounts grouped by categories
- */
 class Accounts {
   public:
+    // Snapshot of all group totals for one day. Immutable once appended.
+    struct Row {
+        Day date;
+        std::vector<USD> group_totals;  // one per group, in groups_ order
+    };
+
     Accounts() = default;
 
-    /// Creates an account, owned by this object, and returns a reference to that account.
+    /// Creates an account or event, owned by this object, and returns a reference to it.
     template <typename T, typename ...Args>
         requires std::is_base_of_v<Account, T> || std::is_base_of_v<Event, T>
     T &add(Args... args) { return *static_cast<T *>(&add(std::make_shared<T>(args...))); }
 
-    /// Returns the group balances on the given day, or their projections if any entry for the day did not exist.
+    /// Returns the group totals on [date], or the closest row at or before [date].
     std::vector<USD> operator[](const Day &date) const;
 
-    /// Returns the "cumulative" total through this group, in order, on the given date.
+    /// Returns the cumulative total through [group] on [date].
     USD cumulative(const std::string_view &group, const Day &date) const;
 
-    /// Returns the total balance across all groups on the given day, or a projection if the day did not exist.
+    /// Returns the total balance across all groups on [date].
     USD total(const Day &date) const;
 
-    /// Returns total balances, by category, on the given day, or a projection if the day did not exist.
+    /// Returns totals by group on [date].
     const std::vector<USD> &totals(const Day &date) const;
 
     std::vector<std::pair<std::string_view, USD>> tagged_totals(const Day &date) const;
 
-    /// Returns an ordered iterator over all dates with registered or projected balances.
-    auto dates() const {
-        update_if_changed();
-        return dates_ | std::views::keys;
-    }
+    /// Returns dates of all stored rows.
+    auto dates() const { return rows_ | std::views::transform([](const Row &r) { return r.date; }); }
 
-    /// Add monthly projections for a specified range of months from [start] to [end].
+    /// Runs month-by-month projection from [start] to [end], building one Row per month.
     void project(Day start, Day end);
 
     pure auto begin() const { return groups_.begin(); }
@@ -49,7 +49,7 @@ class Accounts {
     pure auto rbegin() const { return groups_.rbegin(); }
     pure auto rend() const { return groups_.rend(); }
 
-    /// Returns a vector of all accounts of type T.
+    /// Returns all accounts of type T.
     template <typename T>
         requires std::is_base_of_v<Account, T>
     pure std::vector<T *> get() const {
@@ -67,16 +67,14 @@ class Accounts {
     mutable Taxes taxes;
 
   private:
-    Account &add(const std::shared_ptr<Account>& account);
+    Account &add(const std::shared_ptr<Account> &account);
     Event &add(const std::shared_ptr<Event> &event);
-    const std::vector<USD> &get_or_project(const Day &date) const;
 
-    /// Recompute from all available dates in all accounts.
-    void update_if_changed() const;
+    /// Returns the stored row closest to [date] (at or before). Asserts rows_ is non-empty.
+    const std::vector<USD> &find_row(const Day &date) const;
 
-    mutable bool changed_ = false;
-    mutable std::map<Day, std::vector<USD>> dates_;              // Memoized per-group totals for queried days
+    std::vector<Row> rows_;
     std::vector<std::string_view> groups_;
-    std::unordered_map<std::string_view, std::vector<std::shared_ptr<Account>>> accounts_;  // All accounts
-    std::vector<std::shared_ptr<Event>> events_;                                            // All events
+    std::unordered_map<std::string_view, std::vector<std::shared_ptr<Account>>> accounts_;
+    std::vector<std::shared_ptr<Event>> events_;
 };

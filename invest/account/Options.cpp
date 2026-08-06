@@ -117,6 +117,12 @@ Options::Count Options::sold(const Day &day) const {
     return iter->second;
 }
 
+void Options::advance(Taxes &, const Day &, const Day &to) {
+    const Entry e = get(to);
+    balance_   = e.balance;
+    principal_ = e.principal;
+}
+
 Account::Entry Options::get(const Day &day) const {
     const auto [iso, nso] = vested(day) - sold(day);
     return_if(iso == 0 && nso == 0, {});

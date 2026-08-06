@@ -45,6 +45,10 @@ struct Options : Account {
 
     pure std::vector<Day> dates() const override;
 
+    std::shared_ptr<Account> clone() const override { return std::make_shared<Options>(*this); }
+
+    void advance(Taxes &, const Day &, const Day &to) override;
+
     /// Cannot deposit into Options.
     void deposit(const Day &, const USD &) override { }
 
