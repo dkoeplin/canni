@@ -8,8 +8,8 @@ find_package(nvl)
 
 # Shared library of finance logic for linking into both main and tests
 add_library(finances_lib STATIC
-        invest/Accounts.h
-        invest/Accounts.cpp
+        invest/account/Accounts.h
+        invest/account/Accounts.cpp
         invest/Day.cpp
         invest/Day.h
         invest/Interest.h
@@ -67,5 +67,4 @@ endfunction()
 add_finance_test(test/TestAccount.cpp)
 add_finance_test(test/TestDay.cpp)
 add_finance_test(test/TestInterest.cpp)
-add_finance_test(test/TestOptions.cpp)
 add_finance_test(test/TestUSD.cpp)

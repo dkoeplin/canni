@@ -2,6 +2,8 @@
 
 #include <_stdio.h>
 
+#include <ranges>
+
 #include "nvl/data/List.h"
 
 void line_plot(const Accounts &accounts, const PlotOptions &options) {
@@ -22,9 +24,8 @@ void line_plot(const Accounts &accounts, const PlotOptions &options) {
     fprintf(gnuplot, "set term qt font \"Arial\"\n");
     fprintf(gnuplot, "plot '-' using 1:2 with lines lw 2 title '%s'\n", options.title.c_str());
 
-    for (const auto &day : accounts.dates()) {
-        const auto &amt = accounts.total(day);
-        fprintf(gnuplot, "%s %.2f\n", day.to_string("%Y-%m-%d").c_str(), amt.f64());
+    for (const auto &entry : accounts.totals()) {
+        fprintf(gnuplot, "%s %.2f\n", entry.day.to_string("%Y-%m-%d").c_str(), entry.total.f64());
     }
     fprintf(gnuplot, "e\n");
     pclose(gnuplot);
@@ -56,10 +57,11 @@ void stacked_plot(const Accounts &accounts, const PlotOptions &options) {
         fprintf(gnuplot, "'-' using 1:2 with filledcurves x1 title '%s'%s", group_name.c_str(), delim);
     }
 
-    for (auto group = accounts.rbegin(); group != accounts.rend(); ++group) {
-        for (const Day &day : accounts.dates()) {
-            const USD cumulative = accounts.cumulative(*group, day);
-            fprintf(gnuplot, "%s %.2f\n", day.to_string("%Y-%m-%d").c_str(), cumulative.f64());
+    const auto totals = accounts.totals();
+    for (const auto group : std::views::reverse(accounts)) {
+        for (const auto &entry : totals) {
+            const USD cumulative = entry.cumulative(group);
+            fprintf(gnuplot, "%s %.2f\n", entry.day.to_string("%Y-%m-%d").c_str(), cumulative.f64());
         }
         fprintf(gnuplot, "e\n");
     }

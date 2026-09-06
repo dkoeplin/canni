@@ -4,7 +4,7 @@
 #include <utility>
 #include <vector>
 
-#include "invest/Accounts.h"
+#include "account/Accounts.h"
 #include "invest/Day.h"
 
 /// Provides some basic plotting utilities by creating a gnuplot external process.

@@ -1,62 +1,60 @@
 #include "Account.h"
 
-#include <ranges>
-
 #include "invest/Taxes.h"
+#include "Accounts.h"
 
-Account::Account(const nvl::Tensor<2, std::string> &data, const std::string &name,
-                 const Interest &interest, I64 balance_col, nvl::Maybe<I64> principal_col)
-: Account(name, interest) {
-    for (I64 i = 0; i < data.shape()[0]; ++i) {
-        const nvl::Pos<2> day_idx (i, 0);
-        const nvl::Pos<2> bal_idx (i, balance_col);
-        if (const auto day = Day::parse(data[day_idx])) {
-            Entry entry;
-            entry.balance = USD::parse(data[bal_idx]);
-            if (principal_col) {
-                const nvl::Pos<2> pcp_idx (i, *principal_col);
-                entry.principal = USD::parse(data[pcp_idx]);
-            } else {
-                entry.principal = entry.balance;
-            }
-            history_.emplace(*day, entry);
-        }
-    }
-    // Initialize current state from the last historical entry.
-    if (!history_.empty()) {
-        const auto &last = history_.rbegin()->second;
-        balance_   = last.balance;
-        principal_ = last.principal;
-    }
+USD Account::balance() const { return parent_->current_entry(this).balance; }
+
+USD Account::deposit(const USD &amount) const {
+    parent_->current_entry(this).balance += amount;
+    return amount;
 }
 
-std::vector<Day> Account::dates() const {
-    return history_ | std::views::keys | std::ranges::to<std::vector>();
-}
-
-Account::Entry Account::get(const Day &date) const {
-    const auto iter = history_.upper_bound(date);
-    return_if(history_.empty() || iter == history_.begin(), {});
-    return std::prev(iter)->second;
-}
-
-void Account::advance(Taxes &taxes, const Day &from, const Day &to) {
-    const USD initial = interest_.compounds() ? balance_ : principal_;
-    const USD new_bal = interest_.estimate(from, to, initial);
-    const USD delta   = new_bal - balance_;
-    balance_ = new_bal;
-    tax_gain(taxes, to, delta);
-}
-
-USD Account::withdraw(Taxes &taxes, const Day &date, const USD &amount) {
-    const USD actual = std::min(amount, balance_);
+USD AccountWithInterest::withdraw(const USD &amount) const {
+    const Day day = parent_->current_day();
+    Entry &entry = parent_->current_entry(this);
+    const USD actual = std::min(amount, entry.balance);
     return_if(actual <= 0.00_USD, 0.00_USD);
-    const USD gain = std::max(balance_ - principal_, 0_USD);
-    const double gain_pct = balance_.f64() > 0.0 ? gain.f64() / balance_.f64() : 0.0;
+    const USD gain = std::max(entry.balance - entry.principal, 0_USD);
+    const double gain_pct = entry.balance.f64() > 0.0 ? gain.f64() / entry.balance.f64() : 0.0;
     const USD withdrawn_gain      = actual * gain_pct;
     const USD withdrawn_principal = actual * (1.0 - gain_pct);
-    tax_sale(taxes, date, withdrawn_gain, actual);
-    balance_   -= actual;
-    principal_ -= withdrawn_principal;
+    tax_sale(day, withdrawn_gain);
+    entry.balance -= actual;
+    entry.principal -= withdrawn_principal;
     return actual;
 }
+
+Entry AccountWithInterest::project(const DatedEntry &prev, const Day &next) const {
+    const USD initial = interest_.compounds() ? prev.balance : prev.principal;
+    const USD new_bal = interest_.estimate(prev.day, next, initial);
+    const USD delta   = new_bal - prev.balance;
+    Entry entry;
+    entry.principal = prev.principal;
+    entry.balance = new_bal;
+    tax_gain(next, delta);
+    return entry;
+}
+
+
+void Bonds::tax_gain(const Day& date, const USD& gain) const {
+    parent_->taxes.income(name_ + " Dividends", date, gain);
+}
+
+void Cash::tax_gain(const Day &date, const USD &gain) const {
+    parent_->taxes.income(name_ + " Interest", date, gain);
+}
+
+void RealEstate::tax_sale(const Day &date, const USD &gain) const {
+    static const auto kExclusion = 500000_USD;
+    if (const auto remain = gain - kExclusion; remain > 0_USD)
+        parent_->taxes.long_term(date, remain);
+}
+
+void Retirement::tax_sale(const Day &date, const USD &gain) const {
+    return_if(kind_ == kPostTax);
+    parent_->taxes.income("Retirement", date, gain);
+}
+
+void Stocks::tax_gain(const Day &date, const USD &gain) const { parent_->taxes.dividends(date, gain * 0.1); }
+void Stocks::tax_sale(const Day &date, const USD &gain) const { parent_->taxes.long_term(date, gain * 0.9); }
