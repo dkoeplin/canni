@@ -10,7 +10,7 @@
 
 const Accounts::ColumnType Accounts::Ignore = ColumnType(nullptr, ColumnType::kIgnore);
 
-void Accounts::parse_history(const std::string &filename, const std::vector<ColumnType> &columns) {
+void Accounts::import_csv(const std::string &filename, const std::vector<ColumnType> &columns) {
     const nvl::Tensor<2,std::string> data = parse_data(filename);
     for (I64 i = 0; i < data.shape()[0]; ++i) {
         const nvl::Pos<2> day_idx (i, 0);
@@ -76,6 +76,7 @@ Entry &Accounts::current_entry(const Account *account) {
 }
 
 void Accounts::project(const Day::Distance step) {
+    ASSERT(!dates_.empty(), "Accounts::project requires account history.");
     const Day prev_day = dates_.back();
     const Day next_day = prev_day + step;
 
@@ -94,6 +95,7 @@ void Accounts::project(const Day::Distance step) {
 }
 
 void Accounts::project_until(const Day &last, const Day::Distance &step) {
+    ASSERT(!dates_.empty(), "Accounts::project_until requires account history.");
     while (dates_.back() < last) {
         project(step);
     }

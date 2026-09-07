@@ -62,7 +62,7 @@ Entry Options::estimate(const Day &day) const {
     return Entry {.principal = 0.00_USD, .balance = fmv * (iso + nso) };
 }
 
-Options::Sale Options::sell(const Day day, const USD &price, Count count, bool cashless) const {
+Options::Sale Options::sell(const Day day, const USD &price, Count count, bool cashless) {
     const auto available = avail(day);
     count.iso = std::min(available.iso, count.iso);
     count.nso = std::min(available.nso, count.nso);

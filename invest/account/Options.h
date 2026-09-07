@@ -60,7 +60,7 @@ struct Options : Account {
 
     /// Sell a specified number of options at a certain price.
     /// Assumes a same-day sale, so spread is standard income and sale gains are short-term capital gains
-    pure Sale sell(Day day, const USD &price, Count count, bool cashless = false) const;
+    Sale sell(Day day, const USD &price, Count count, bool cashless = false);
 
     /// Mark a specific number of options as previously sold at a certain date.
     Options &with_sale(Day day, const USD &price, Count count, bool cashless = false);
@@ -86,7 +86,7 @@ struct Options : Account {
     USD strike_;                    /// Strike price
     nvl::Maybe<Day> expires_;       /// Expiration date of options
     std::map<Day, Count> vested_;   /// Cumulative vested count
-    mutable std::map<Day, Count> sold_;     /// Cumulative sold
+    std::map<Day, Count> sold_;     /// Cumulative sold
 };
 
 inline std::ostream &operator<<(std::ostream &os, const Options::Count &count) {

@@ -101,4 +101,3 @@ struct std::hash<Day> {
         return std::hash<I64>()((date.year_ << 9) + (date.day_ << 4) + date.month_);
     }
 };
-

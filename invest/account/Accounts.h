@@ -24,9 +24,9 @@ struct Accounts {
     static ColumnType Balance(Account &account) { return ColumnType(&account, ColumnType::kBalance); }
     static ColumnType Principal(Account &account) { return ColumnType(&account, ColumnType::kPrincipal); }
 
-    /// Parse account history from [filename], with the specified columns.
+    /// Parses account history from CSV [filename], with the specified columns.
     /// The first column is assumed to be the date, while others are specified by the column types above.
-    void parse_history(const std::string &filename, const std::vector<ColumnType> &columns);
+    void import_csv(const std::string &filename, const std::vector<ColumnType> &columns);
 
     /// Creates an account or event, owned by this object, and returns a reference to it.
     template <typename T, typename ...Args>
