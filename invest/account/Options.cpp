@@ -107,7 +107,7 @@ Options &Options::with_sale(Day day, const USD &price, Count count, bool cashles
 
 Options::Count Options::vested(const Day &day) const {
     return_if(expires_ && day >= *expires_, {}); // Expiration
-    const auto it = vested_.upper_bound(day); // Strictly after this day
+    const auto it = vested_.upper_bound(day);    // Strictly after this day
     return_if(it == vested_.begin() || vested_.empty(), {});
     const auto iter = std::prev(it);
     return iter->second;
@@ -115,7 +115,7 @@ Options::Count Options::vested(const Day &day) const {
 
 Options::Count Options::sold(const Day &day) const {
     return_if(expires_ && day >= *expires_, {}); // Expiration
-    const auto it = sold_.upper_bound(day); // Strictly after this day
+    const auto it = sold_.upper_bound(day);      // Strictly after this day
     return_if(it == sold_.begin() || sold_.empty(), {});
     const auto iter = std::prev(it);
     return iter->second;
