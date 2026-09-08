@@ -3,6 +3,13 @@
 #include "invest/Taxes.h"
 #include "Accounts.h"
 
+// market_sequence implementations — each type picks its vector from MarketReturns.
+const std::vector<double> *Bonds::market_sequence(const MarketReturns &mr) const     { return &mr.bonds; }
+const std::vector<double> *Cash::market_sequence(const MarketReturns &mr) const      { return &mr.cash; }
+const std::vector<double> *RealEstate::market_sequence(const MarketReturns &mr) const { return &mr.real_estate; }
+const std::vector<double> *Retirement::market_sequence(const MarketReturns &mr) const { return &mr.stocks; }
+const std::vector<double> *Stocks::market_sequence(const MarketReturns &mr) const    { return &mr.stocks; }
+
 USD Account::balance() const { return parent_->current_entry(this).balance; }
 
 USD Account::deposit(const USD &amount) const {
@@ -26,8 +33,14 @@ USD AccountWithInterest::withdraw(const USD &amount) const {
 }
 
 Entry AccountWithInterest::project(const DatedEntry &prev, const Day &next) const {
-    const USD initial = interest_.compounds() ? prev.balance : prev.principal;
-    const USD new_bal = interest_.estimate(prev.day, next, initial);
+    Interest effective = interest_;
+    if (const auto *mr = parent_->market_returns()) {
+        if (const auto *seq = market_sequence(*mr)) {
+            effective = Interest(interest_.type(), mr->at(*seq, next.year()));
+        }
+    }
+    const USD initial = effective.compounds() ? prev.balance : prev.principal;
+    const USD new_bal = effective.estimate(prev.day, next, initial);
     const USD delta   = new_bal - prev.balance;
     Entry entry;
     entry.principal = prev.principal;

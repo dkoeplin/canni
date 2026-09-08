@@ -61,6 +61,8 @@ abstract struct Account {
     std::string name_;
 };
 
+struct MarketReturns;
+
 struct AccountWithInterest : Account {
     class_tag(AccountWithInterest, Account);
     explicit AccountWithInterest(Accounts *parent, std::string name, Interest interest)
@@ -72,6 +74,9 @@ struct AccountWithInterest : Account {
     pure Interest apy() const { return interest_; }
     void set_apy(const Interest interest) { interest_ = interest; }
 
+    /// Returns the per-year return sequence for this account type, or nullptr to use interest_.
+    virtual const std::vector<double> *market_sequence(const MarketReturns &) const { return nullptr; }
+
   protected:
     Interest interest_;
 };
@@ -81,6 +86,7 @@ struct Bonds : AccountWithInterest {
     using AccountWithInterest::AccountWithInterest;
     void tax_gain(const Day &date, const USD &gain) const override;
     void tax_sale(const Day &, const USD &) const override { }
+    const std::vector<double> *market_sequence(const MarketReturns &mr) const override;
 };
 
 struct Cash : AccountWithInterest {
@@ -88,6 +94,7 @@ struct Cash : AccountWithInterest {
     using AccountWithInterest::AccountWithInterest;
     void tax_gain(const Day &date, const USD &amount) const override;
     void tax_sale(const Day &, const USD &) const override { }
+    const std::vector<double> *market_sequence(const MarketReturns &mr) const override;
 };
 
 struct RealEstate : AccountWithInterest {
@@ -95,6 +102,7 @@ struct RealEstate : AccountWithInterest {
     using AccountWithInterest::AccountWithInterest;
     void tax_gain(const Day &, const USD &) const override { }
     void tax_sale(const Day &date, const USD &gain) const override;
+    const std::vector<double> *market_sequence(const MarketReturns &mr) const override;
 };
 
 struct Retirement : AccountWithInterest {
@@ -106,6 +114,7 @@ struct Retirement : AccountWithInterest {
 
     void tax_gain(const Day &, const USD &) const override { }
     void tax_sale(const Day &date, const USD &gain) const override;
+    const std::vector<double> *market_sequence(const MarketReturns &mr) const override;
 
   protected:
     Kind kind_;
@@ -116,4 +125,5 @@ struct Stocks : AccountWithInterest {
     using AccountWithInterest::AccountWithInterest;
     void tax_gain(const Day &date, const USD &gain) const override;
     void tax_sale(const Day &date, const USD &gain) const override;
+    const std::vector<double> *market_sequence(const MarketReturns &mr) const override;
 };

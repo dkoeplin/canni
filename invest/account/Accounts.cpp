@@ -1,5 +1,6 @@
 #include "Accounts.h"
 
+#include <cmath>
 #include <ranges>
 #include <set>
 #include <unordered_map>
@@ -9,6 +10,34 @@
 #include "invest/Parsing.h"
 
 const Accounts::ColumnType Accounts::Ignore = ColumnType(nullptr, ColumnType::kIgnore);
+
+namespace {
+std::vector<double> sample_returns(I64 years, double mean, double sigma, std::mt19937 &rng) {
+    // Log-normal: draw log(1+r) ~ Normal(log_mu, sigma) so that E[1+r] = 1+mean.
+    const double log_mu = std::log(1.0 + mean) - 0.5 * sigma * sigma;
+    std::normal_distribution<double> dist(log_mu, sigma);
+    std::vector<double> result(years);
+    for (auto &r : result) {
+        r = std::exp(dist(rng)) - 1.0;
+    }
+    return result;
+}
+} // namespace
+
+MarketReturns MarketReturns::generate(const I64 base_year, const I64 years,
+                                      const AssetClass stocks, const AssetClass bonds,
+                                      const AssetClass cash, const AssetClass real_estate,
+                                      const AssetClass inflation,
+                                      std::mt19937 &rng) {
+    MarketReturns mr;
+    mr.base_year   = base_year;
+    mr.stocks      = sample_returns(years, stocks.mean,      stocks.sigma,      rng);
+    mr.bonds       = sample_returns(years, bonds.mean,       bonds.sigma,       rng);
+    mr.cash        = sample_returns(years, cash.mean,        cash.sigma,        rng);
+    mr.real_estate = sample_returns(years, real_estate.mean, real_estate.sigma, rng);
+    mr.inflation   = sample_returns(years, inflation.mean,   inflation.sigma,   rng);
+    return mr;
+}
 
 void Accounts::import_csv(const std::string &filename, const std::vector<ColumnType> &columns) {
     const nvl::Tensor<2,std::string> data = parse_data(filename);
@@ -73,6 +102,13 @@ Entry &Accounts::current_entry(const Account *account) {
     ASSERT(iter != rows_.end(), "No entry for account " << account->name());
     ASSERT(!iter->second.empty(), "No entries defined for account " << account->name());
     return iter->second.back();
+}
+
+void Accounts::seed(const Day &day) {
+    dates_.push_back(day);
+    for (const auto &account : accounts_) {
+        rows_[account.get()].push_back(account->estimate(day));
+    }
 }
 
 void Accounts::project(const Day::Distance step) {

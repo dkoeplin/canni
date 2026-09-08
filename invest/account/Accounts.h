@@ -1,5 +1,7 @@
 #pragma once
 
+#include <optional>
+#include <random>
 #include <string_view>
 #include <vector>
 
@@ -9,6 +11,32 @@
 #include "invest/Day.h"
 #include "invest/Taxes.h"
 #include "invest/USD.h"
+
+struct MarketReturns {
+    struct AssetClass {
+        double mean;   // Expected annual return (e.g. 0.07)
+        double sigma;  // Annual standard deviation (e.g. 0.15)
+    };
+
+    /// Generates [years] annual returns for each asset class via log-normal sampling.
+    static MarketReturns generate(I64 base_year, I64 years,
+                                  AssetClass stocks, AssetClass bonds,
+                                  AssetClass cash, AssetClass real_estate,
+                                  AssetClass inflation,
+                                  std::mt19937 &rng);
+
+    pure double at(const std::vector<double> &seq, I64 year) const {
+        const I64 idx = year - base_year;
+        return (idx >= 0 && idx < static_cast<I64>(seq.size())) ? seq[idx] : 0.0;
+    }
+
+    I64 base_year = 0;
+    std::vector<double> stocks;
+    std::vector<double> bonds;
+    std::vector<double> cash;
+    std::vector<double> real_estate;
+    std::vector<double> inflation;
+};
 
 
 struct Accounts {
@@ -52,6 +80,10 @@ struct Accounts {
 
     pure Day current_day() const { return dates_.back(); }
 
+    /// Seeds the initial state with a starting date and zero balances for all registered accounts.
+    /// Must be called before project() when not using import_csv().
+    void seed(const Day &day);
+
     /// Projects [step] from the current ending date using current account balances and registered events.
     void project(Day::Distance step);
 
@@ -79,6 +111,9 @@ struct Accounts {
         return accounts;
     }
 
+    void set_market_returns(MarketReturns returns) { market_returns_ = std::move(returns); }
+    const MarketReturns *market_returns() const { return market_returns_ ? &*market_returns_ : nullptr; }
+
     Taxes taxes;
 
   private:
@@ -90,6 +125,7 @@ struct Accounts {
     std::unordered_map<std::string_view, std::vector<Account *>> accounts_by_group_;
     std::vector<std::shared_ptr<Event>> events_;
 
+    std::optional<MarketReturns> market_returns_;
     std::vector<Day> dates_;
     std::unordered_map<const Account *, std::vector<Entry>> rows_;
 };
