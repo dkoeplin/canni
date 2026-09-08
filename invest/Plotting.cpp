@@ -93,7 +93,7 @@ void xy_plot(const std::vector<XYSeries> &series, const XYPlotOptions &options) 
         const auto &s = series[i];
         const char *axes = s.use_y2 ? "axes x1y2 " : "";
         const char *delim = i + 1 < series.size() ? ", \\\n     " : "\n";
-        fprintf(gnuplot, "'-' using 1:2 %swith lines lw 2 title '%s'%s", axes, s.title.c_str(), delim);
+        fprintf(gnuplot, "'-' using 1:2 %swith lines lw 2 title '%s'%s", axes, s.name.c_str(), delim);
     }
     for (const auto &s : series) {
         for (const auto &[x, y] : s.points) {

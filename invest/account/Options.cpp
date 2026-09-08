@@ -83,7 +83,7 @@ Options::Sale Options::sell(const Day day, const USD &price, Count count, bool c
 
     Taxes &taxes = parent_->taxes;
     // Spread (FMV - Strike) is taxed as standard income.
-    taxes.income(name_ + " Exercise on " + day.to_string(), day, spread);
+    taxes.income(day, spread);
     // Gain (Sale - FMV) is taxed as short term capital gains.
     taxes.short_term(day, gain);
 

@@ -2,22 +2,10 @@
 
 #include "invest/Inflation.h"
 
-Taxes &Taxes::with(const Day &day, const USD &amount, const std::function<USD &(Entry &)> &func) {
-    const auto prev = get(day);
-    const auto [iter, _] = value_.try_emplace(day, prev); // Add explicit entry for this day if it didn't exist
-    for (auto i = iter; i != value_.end() && i->first.year() == day.year(); ++i) { // Increment every entry in this year
-        USD &field = func(i->second);
-        field += amount;
-    }
-    return *this;
-}
-
-Taxes::Entry Taxes::get(const Day& day) const {
-    const auto it = value_.upper_bound(day); // Strictly after this day
-    return_if(it == value_.begin() || value_.empty(), {});
-    const auto iter = std::prev(it);
-    return_if(iter->first.year() != day.year(), {}); // Stay within the same calendar year
-    return iter->second;
+const Taxes::Entry &Taxes::get(const Day& day) const {
+    static constexpr Entry kEmpty = {};
+    const auto it = value_.find(day.year());
+    return it != value_.end() ? it->second : kEmpty;
 }
 
 namespace {

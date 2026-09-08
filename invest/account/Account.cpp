@@ -51,11 +51,11 @@ Entry AccountWithInterest::project(const DatedEntry &prev, const Day &next) cons
 
 
 void Bonds::tax_gain(const Day& date, const USD& gain) const {
-    parent_->taxes.income(name_ + " Dividends", date, gain);
+    parent_->taxes.income(date, gain);
 }
 
 void Cash::tax_gain(const Day &date, const USD &gain) const {
-    parent_->taxes.income(name_ + " Interest", date, gain);
+    parent_->taxes.income(date, gain);
 }
 
 void RealEstate::tax_sale(const Day &date, const USD &gain) const {
@@ -66,7 +66,7 @@ void RealEstate::tax_sale(const Day &date, const USD &gain) const {
 
 void Retirement::tax_sale(const Day &date, const USD &gain) const {
     return_if(kind_ == kPostTax);
-    parent_->taxes.income("Retirement", date, gain);
+    parent_->taxes.income(date, gain);
 }
 
 void Stocks::tax_gain(const Day &date, const USD &gain) const { parent_->taxes.dividends(date, gain * 0.1); }

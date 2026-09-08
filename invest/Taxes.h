@@ -18,8 +18,6 @@ class Taxes {
         pure USD total() const { return standard + medicare + social_security; }
     };
     struct Income {
-        std::map<std::string, USD> std_income;
-
         USD standard;          // Standard income for the year
         USD dividends;         // Qualified dividends
         USD short_term_gains;  // Short term capital gains
@@ -41,50 +39,26 @@ class Taxes {
         Paid paid;
     };
 
-    pure Entry get(const Day &day) const;
-
-    Taxes &with(const Day &day, const USD &amount, const std::function<USD &(Entry &)>& func);
+    pure const Entry &get(const Day &day) const;
 
     /// Mark tax deductions during the year.
-    Taxes &donation(const Day &day, const USD &amount) {
-        return with(day, amount, [](Entry &b) -> USD& { return b.deductions.donations; });
-    }
-    Taxes &mortgage(const Day &day, const USD &amount) {
-        return with(day, amount, [](Entry &b) -> USD& { return b.deductions.mortgage; });
-    }
-    Taxes &property_tax(const Day &day, const USD &amount) {
-        return with(day, amount, [](Entry &b) -> USD& { return b.deductions.salt; });
-    }
+    void donation(const Day &day, const USD &amount) { value_[day.year()].deductions.donations += amount; }
+    void mortgage(const Day &day, const USD &amount) { value_[day.year()].deductions.mortgage += amount; }
+    void property_tax(const Day &day, const USD &amount) { value_[day.year()].deductions.salt += amount; }
 
     /// Mark paid taxes during the year.
-    Taxes &withholding(const Day &day, const USD &amount) {
-        return with(day, amount, [](Entry &b) -> USD& { return b.paid.standard; });
-    }
-    Taxes &medicare(const Day &day, const USD &amount ) {
-        return with(day, amount, [](Entry &b) -> USD& { return b.paid.medicare; });
-    }
-    Taxes &social_security(const Day &day, const USD &amount) {
-        return with(day, amount, [](Entry &b) -> USD& { return b.paid.social_security; });
-    }
+    void withholding(const Day &day, const USD &amount) { value_[day.year()].paid.standard += amount; }
+    void medicare(const Day &day, const USD &amount ) { value_[day.year()].paid.medicare += amount; }
+    void social_security(const Day &day, const USD &amount) { value_[day.year()].paid.social_security += amount; }
 
     /// Mark various types of income during the year.
-    Taxes &income(const std::string &name, const Day &day, const USD &amount) {
-        with(day, amount, [](Entry &b)-> USD& { return b.income.standard; });
-        with(day, amount, [&](Entry &b)-> USD& { return b.income.std_income[name]; });
-        return *this;
-    }
-    Taxes &dividends(const Day &day, const USD &amount) {
-        return with(day, amount, [](Entry &b)-> USD& { return b.income.dividends; });
-    }
-    Taxes &short_term(const Day &day, const USD &amount) {
-        return with(day, amount, [](Entry &b)-> USD& { return b.income.short_term_gains; });
-    }
-    Taxes &long_term(const Day &day, const USD &amount) {
-        return with(day, amount, [](Entry &b)-> USD& { return b.income.long_term_gains; });
-    }
+    void income(const Day &day, const USD &amount) { value_[day.year()].income.standard += amount; }
+    void dividends(const Day &day, const USD &amount) { value_[day.year()].income.dividends += amount; }
+    void short_term(const Day &day, const USD &amount) { value_[day.year()].income.short_term_gains += amount; }
+    void long_term(const Day &day, const USD &amount) { value_[day.year()].income.long_term_gains += amount; }
 
   private:
-    mutable std::map<Day, Entry> value_;  /// Recorded tax breakdown, by date.
+    mutable std::unordered_map<I64, Entry> value_;  /// Recorded tax breakdown, by date.
 };
 
 struct CalculatedTaxes {
@@ -105,11 +79,6 @@ inline std::ostream &operator<<(std::ostream &os, const CalculatedTaxes &taxes) 
     os << "=============== " << taxes.year << " Tax Summary ===============" << std::endl;
     os << "=== Income ===" << std::endl
        << "            Standard:  " << taxes.entry.income.standard << std::endl;
-    for (const auto &[name, total] : taxes.entry.income.std_income) {
-        if (total > 0.00_USD) {
-            os << "                  " << name << ": " << total << std::endl;
-        }
-    }
     os << "            Dividends: " << taxes.entry.income.dividends << std::endl
        << "Capital Gains (short): " << taxes.entry.income.short_term_gains << std::endl
        << " Capital Gains (long): " << taxes.entry.income.long_term_gains << std::endl;

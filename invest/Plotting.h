@@ -22,7 +22,7 @@ void line_plot(const Accounts &accounts, const PlotOptions &options = {});
 void stacked_plot(const Accounts &accounts, const PlotOptions &options = {});
 
 struct XYSeries {
-    std::string title;
+    std::string name;
     std::vector<std::pair<double, double>> points;
     bool use_y2 = false;
 };
