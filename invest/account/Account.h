@@ -56,12 +56,23 @@ abstract struct Account {
     pure std::string_view category() const { return _get_classtag().name; }
     pure const std::string &name() const { return name_; }
 
+    void set_index(const U64 index) { index_ = index; }
+    pure U64 index() const { return index_; }
+
   protected:
     Accounts *parent_;
     std::string name_;
+    U64 index_ = UINT64_MAX;
 };
 
-struct MarketReturns;
+enum class AssetType : U64 {
+    kStocks,
+    kBonds,
+    kCash,
+    kRealEstate,
+    kInflation,
+    kNUM_CLASSES
+};
 
 struct AccountWithInterest : Account {
     class_tag(AccountWithInterest, Account);
@@ -75,7 +86,7 @@ struct AccountWithInterest : Account {
     void set_apy(const Interest interest) { interest_ = interest; }
 
     /// Returns the per-year return sequence for this account type, or nullptr to use interest_.
-    virtual const std::vector<double> *market_sequence(const MarketReturns &) const { return nullptr; }
+    pure virtual AssetType type() const = 0;
 
   protected:
     Interest interest_;
@@ -86,7 +97,7 @@ struct Bonds : AccountWithInterest {
     using AccountWithInterest::AccountWithInterest;
     void tax_gain(const Day &date, const USD &gain) const override;
     void tax_sale(const Day &, const USD &) const override { }
-    const std::vector<double> *market_sequence(const MarketReturns &mr) const override;
+    pure AssetType type() const override { return AssetType::kBonds; }
 };
 
 struct Cash : AccountWithInterest {
@@ -94,7 +105,7 @@ struct Cash : AccountWithInterest {
     using AccountWithInterest::AccountWithInterest;
     void tax_gain(const Day &date, const USD &amount) const override;
     void tax_sale(const Day &, const USD &) const override { }
-    const std::vector<double> *market_sequence(const MarketReturns &mr) const override;
+    pure AssetType type() const override { return AssetType::kCash; }
 };
 
 struct RealEstate : AccountWithInterest {
@@ -102,7 +113,7 @@ struct RealEstate : AccountWithInterest {
     using AccountWithInterest::AccountWithInterest;
     void tax_gain(const Day &, const USD &) const override { }
     void tax_sale(const Day &date, const USD &gain) const override;
-    const std::vector<double> *market_sequence(const MarketReturns &mr) const override;
+    pure AssetType type() const override { return AssetType::kRealEstate; }
 };
 
 struct Retirement : AccountWithInterest {
@@ -114,7 +125,7 @@ struct Retirement : AccountWithInterest {
 
     void tax_gain(const Day &, const USD &) const override { }
     void tax_sale(const Day &date, const USD &gain) const override;
-    const std::vector<double> *market_sequence(const MarketReturns &mr) const override;
+    pure AssetType type() const override { return AssetType::kStocks; }
 
   protected:
     Kind kind_;
@@ -125,5 +136,5 @@ struct Stocks : AccountWithInterest {
     using AccountWithInterest::AccountWithInterest;
     void tax_gain(const Day &date, const USD &gain) const override;
     void tax_sale(const Day &date, const USD &gain) const override;
-    const std::vector<double> *market_sequence(const MarketReturns &mr) const override;
+    pure AssetType type() const override { return AssetType::kStocks; }
 };

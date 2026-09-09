@@ -13,29 +13,23 @@
 #include "invest/USD.h"
 
 struct MarketReturns {
+  public:
     struct AssetClass {
-        double mean;   // Expected annual return (e.g. 0.07)
-        double sigma;  // Annual standard deviation (e.g. 0.15)
+        AssetType type; // Asset type
+        double mean;    // Expected annual return (e.g. 0.07)
+        double sigma;   // Annual standard deviation (e.g. 0.15)
     };
 
-    /// Generates [years] annual returns for each asset class via log-normal sampling.
-    static MarketReturns generate(I64 base_year, I64 years,
-                                  AssetClass stocks, AssetClass bonds,
-                                  AssetClass cash, AssetClass real_estate,
-                                  AssetClass inflation,
-                                  std::mt19937 &rng);
+    /// Preallocates [years] annual returns for each asset class via log-normal sampling.
+    MarketReturns(I64 base_year, I64 years, const std::vector<AssetClass> &classes, std::mt19937 &rng);
 
-    pure double at(const std::vector<double> &seq, I64 year) const {
-        const I64 idx = year - base_year;
-        return (idx >= 0 && idx < static_cast<I64>(seq.size())) ? seq[idx] : 0.0;
-    }
+    pure double at(AssetType type, I64 year) const;
+    pure double cumulative(AssetType type, I64 year) const;
 
-    I64 base_year = 0;
-    std::vector<double> stocks;
-    std::vector<double> bonds;
-    std::vector<double> cash;
-    std::vector<double> real_estate;
-    std::vector<double> inflation;
+  private:
+    I64 base_year_ = 0;
+    std::vector<std::vector<double>> classes_;
+    std::vector<std::vector<double>> cumulative_;
 };
 
 
@@ -127,5 +121,5 @@ struct Accounts {
 
     std::optional<MarketReturns> market_returns_;
     std::vector<Day> dates_;
-    std::unordered_map<const Account *, std::vector<Entry>> rows_;
+    std::vector<std::vector<Entry>> rows_;
 };

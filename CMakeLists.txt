@@ -12,6 +12,8 @@ add_library(finances_lib STATIC
         invest/account/Accounts.cpp
         invest/Day.cpp
         invest/Day.h
+        invest/Inflation.h
+        invest/Inflation.cpp
         invest/Interest.h
         invest/Interest.cpp
         invest/account/Options.h
@@ -28,7 +30,6 @@ add_library(finances_lib STATIC
         invest/account/Company.h
         invest/Taxes.cpp
         invest/Taxes.h
-        invest/Inflation.h
 )
 target_link_libraries(finances_lib PUBLIC nvl)
 target_include_directories(finances_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
