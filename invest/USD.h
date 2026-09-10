@@ -12,8 +12,8 @@
  */
 class USD {
 public:
-    static USD dollars(const I64 dollars) { return USD(dollars * 100); }
-    static USD round(const F64 dollars) { return USD(static_cast<I64>(std::round(dollars * 100))); }
+    static constexpr USD dollars(const I64 dollars) { return USD(dollars * 100); }
+    static constexpr USD round(const F64 dollars) { return USD(static_cast<I64>(dollars * 100)); }
     static USD parse(const std::string &str);
 
     USD() = default;
@@ -41,11 +41,11 @@ public:
     pure F64 f64() const { return static_cast<F64>(cents_) / 100; }
 
 private:
-    explicit USD(const I64 cents) : cents_(cents) {}
+    explicit constexpr USD(const I64 cents) : cents_(cents) {}
     I64 cents_ = 0;
 };
 
 inline std::ostream &operator<<(std::ostream &os, const USD &usd) { return os << usd.to_string(); }
 
-constexpr USD operator""_USD(const unsigned long long n) { return USD::dollars(n); }
-constexpr USD operator""_USD(const long double n) { return USD::round(n); }
+consteval USD operator""_USD(const unsigned long long n) { return USD::dollars(n); }
+consteval USD operator""_USD(const long double n) { return USD::round(n); }

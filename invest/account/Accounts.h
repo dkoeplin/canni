@@ -36,6 +36,17 @@ struct MarketReturns {
 struct Accounts {
     Accounts() = default;
 
+    struct History {
+        std::vector<Day> dates;
+        std::vector<std::vector<Entry>> rows;
+    };
+
+    /// Captures current date/balance history for later restoration via load_history().
+    pure History snapshot() const { return {dates_, rows_}; }
+
+    /// Replaces date/balance history with a previously captured snapshot.
+    void load_history(const History &h) { dates_ = h.dates; rows_ = h.rows; }
+
     struct ColumnType {
         enum Type { kIgnore, kBalance, kPrincipal };
         constexpr explicit ColumnType(Account *account, Type type) : account(account), type(type) {}
@@ -93,16 +104,11 @@ struct Accounts {
     /// Returns all accounts of type T.
     template <typename T>
         requires std::is_base_of_v<Account, T>
-    pure std::vector<T *> get() const {
-        static const std::vector<T *> kEmpty;
+    pure const std::vector<Account *> &get() const {
+        static constexpr std::vector<Account *> kEmpty;
         const std::string_view category = nvl::reflect<T>().name;
         const auto iter = accounts_by_group_.find(category);
-        return_if(iter == accounts_by_group_.end(), kEmpty);
-        std::vector<T *> accounts;
-        for (const auto &account : iter->second) {
-            accounts.push_back(nvl::dyn_cast<T>(account));
-        }
-        return accounts;
+        return iter != accounts_by_group_.end() ? iter->second : kEmpty;
     }
 
     void set_market_returns(MarketReturns returns) { market_returns_ = std::move(returns); }

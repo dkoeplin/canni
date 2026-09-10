@@ -2,13 +2,11 @@
 
 #include "invest/Inflation.h"
 
-const Taxes::Entry &Taxes::get(const Day& day) const {
-    static constexpr Entry kEmpty = {};
-    const auto it = value_.find(day.year());
-    return it != value_.end() ? it->second : kEmpty;
-}
-
 namespace {
+
+/// Assumes tax constants are adjusted for inflation based on the end of that tax year.
+/// All original constants in this file are from 2026, so use that as the reference date for future inflation.
+const Day kReference (1, Month::Jan, 2026);
 
 struct TaxBracket {
     USD max;
@@ -33,8 +31,8 @@ USD income_tax(const Inflation &inflation,
     const U64 N = brackets.size();
     for (U64 i = 0; i < N; ++i) {
         const TaxBracket &bracket = brackets[i];
-        const USD min = i == 0 ? 0.00_USD : inflation(date, brackets[i - 1].max);
-        const USD max = inflation(date, bracket.max);
+        const USD min = i == 0 ? 0.00_USD : inflation(kReference, date, brackets[i - 1].max);
+        const USD max = inflation(kReference, date, bracket.max);
         total += std::max(0.00_USD, std::min(max, income) - min) * bracket.rate;
     }
     return total;
@@ -56,7 +54,7 @@ USD long_term_capital_gains_tax(const Inflation &inflation, const Day &date,
     USD remaining = preferential;
     for (const auto &[max_income, rate] : k2026LongTermCapGainsBracketsMFJ) {
         if (remaining <= 0.00_USD) break;
-        const USD max = inflation(date, max_income);
+        const USD max = inflation(kReference, date, max_income);
         const USD room = std::max(0.00_USD, max - stacked);
         const USD in_bracket = std::min(remaining, room);
         tax += in_bracket * rate;
@@ -99,22 +97,25 @@ USD medicare(const Inflation &, const Day &, const Taxes::Entry &entry) {
 USD social_security(const Inflation &inflation, const Day &date, const Taxes::Entry &entry) {
     // Social Security wage base — approximate for 2026, verify annually
     static const auto kSSWageBase = 180000_USD;
-    const USD wage_base = inflation(date, kSSWageBase);
-
+    const USD wage_base = inflation(kReference, date, kSSWageBase);
     return std::min(entry.income.standard, wage_base) * 0.062;
 }
 
 } // namespace
 
-CalculatedTaxes calculate_taxes(const double avg_inflation, const Taxes &taxes, const I64 year) {
-    // Assume tax constants are adjusted for inflation based on the end of that tax year.
-    // All original constants in this file are from 2026, so use that as the reference date for future inflation.
-    const Inflation inflation (Day::end_of_year(2026), avg_inflation);
+const Taxes::Entry &Taxes::get(const Day& day) const {
+    static constexpr Entry kEmpty = {};
+    const I64 idx = day.year() - base_year_;
+    return (!entries_.empty() && idx >= 0 && idx < static_cast<I64>(entries_.size()))
+        ? entries_[idx] : kEmpty;
+}
+
+CalculatedTaxes calculate_taxes(const Inflation &inflation, const Taxes &taxes, const I64 year) {
     const Day date = Day::end_of_year(year);
 
     // Standard deduction for MFJ in 2026
     static const auto kStandardDeduction = 32000_USD;
-    const auto standard_deduction = inflation(date, kStandardDeduction);
+    const auto standard_deduction = inflation(kReference, date, kStandardDeduction);
 
     CalculatedTaxes result;
     const Taxes::Entry entry = taxes.get(Day::end_of_year(year));

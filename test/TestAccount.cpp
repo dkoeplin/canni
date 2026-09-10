@@ -125,10 +125,9 @@ TEST(Accounts, MarketReturnsOverridesAPY) {
     accts.seed(Day("01/01/2024"));
     accts.current_entry(&stocks).balance = 1000_USD;
 
-    // Fixed 20% return for 2024 and 2025, overriding the 0% APY.
-    MarketReturns mr;
-    mr.base_year = 2024;
-    mr.stocks = {0.20, 0.20};
+    // Fixed 20% return for 2024 and 2025, overriding the 0% APY. sigma=0 gives deterministic returns.
+    std::mt19937 rng(42);
+    MarketReturns mr(2024, 2, {{AssetType::kStocks, 0.20, 0.0}}, rng);
     accts.set_market_returns(std::move(mr));
 
     accts.project_until(Day("01/01/2025"), 1_months);

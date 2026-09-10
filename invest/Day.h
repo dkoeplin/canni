@@ -90,8 +90,8 @@ class Day {
 };
 
 // constexpr Day::Distance operator""_days(const unsigned long long n) { return Day::days(n); }
-constexpr Day::Distance operator""_months(const unsigned long long n) { return Day::months(n); }
-constexpr Day::Distance operator""_years(const unsigned long long n) { return Day::years(n); }
+consteval Day::Distance operator""_months(const unsigned long long n) { return Day::months(n); }
+consteval Day::Distance operator""_years(const unsigned long long n) { return Day::years(n); }
 
 inline std::ostream &operator<<(std::ostream &os, const Day &day) { return os << day.to_string(); }
 

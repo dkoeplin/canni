@@ -1,7 +1,7 @@
 #pragma once
 
 #include <functional>
-#include <map>
+#include <vector>
 
 #include "Day.h"
 #include "USD.h"
@@ -42,23 +42,37 @@ class Taxes {
     pure const Entry &get(const Day &day) const;
 
     /// Mark tax deductions during the year.
-    void donation(const Day &day, const USD &amount) { value_[day.year()].deductions.donations += amount; }
-    void mortgage(const Day &day, const USD &amount) { value_[day.year()].deductions.mortgage += amount; }
-    void property_tax(const Day &day, const USD &amount) { value_[day.year()].deductions.salt += amount; }
+    void donation(const Day &day, const USD &amount) { entry_for(day.year()).deductions.donations += amount; }
+    void mortgage(const Day &day, const USD &amount) { entry_for(day.year()).deductions.mortgage += amount; }
+    void property_tax(const Day &day, const USD &amount) { entry_for(day.year()).deductions.salt += amount; }
 
     /// Mark paid taxes during the year.
-    void withholding(const Day &day, const USD &amount) { value_[day.year()].paid.standard += amount; }
-    void medicare(const Day &day, const USD &amount ) { value_[day.year()].paid.medicare += amount; }
-    void social_security(const Day &day, const USD &amount) { value_[day.year()].paid.social_security += amount; }
+    void withholding(const Day &day, const USD &amount) { entry_for(day.year()).paid.standard += amount; }
+    void medicare(const Day &day, const USD &amount ) { entry_for(day.year()).paid.medicare += amount; }
+    void social_security(const Day &day, const USD &amount) { entry_for(day.year()).paid.social_security += amount; }
 
     /// Mark various types of income during the year.
-    void income(const Day &day, const USD &amount) { value_[day.year()].income.standard += amount; }
-    void dividends(const Day &day, const USD &amount) { value_[day.year()].income.dividends += amount; }
-    void short_term(const Day &day, const USD &amount) { value_[day.year()].income.short_term_gains += amount; }
-    void long_term(const Day &day, const USD &amount) { value_[day.year()].income.long_term_gains += amount; }
+    void income(const Day &day, const USD &amount) { entry_for(day.year()).income.standard += amount; }
+    void dividends(const Day &day, const USD &amount) { entry_for(day.year()).income.dividends += amount; }
+    void short_term(const Day &day, const USD &amount) { entry_for(day.year()).income.short_term_gains += amount; }
+    void long_term(const Day &day, const USD &amount) { entry_for(day.year()).income.long_term_gains += amount; }
 
   private:
-    mutable std::unordered_map<I64, Entry> value_;  /// Recorded tax breakdown, by date.
+    Entry &entry_for(I64 year) {
+        if (entries_.empty()) {
+            base_year_ = year;
+        } else if (year < base_year_) {
+            entries_.insert(entries_.begin(), base_year_ - year, Entry{});
+            base_year_ = year;
+        }
+        if (year - base_year_ >= static_cast<I64>(entries_.size())) {
+            entries_.resize(year - base_year_ + 1);
+        }
+        return entries_[year - base_year_];
+    }
+
+    I64 base_year_ = 0;
+    std::vector<Entry> entries_;
 };
 
 struct CalculatedTaxes {
@@ -73,7 +87,7 @@ struct CalculatedTaxes {
     pure USD total() const { return federal_income + ltcg + niit + medicare + social_security; }
     pure USD net_owed() const { return total() - entry.paid.total(); }
 };
-CalculatedTaxes calculate_taxes(double avg_inflation, const Taxes &taxes, I64 year);
+CalculatedTaxes calculate_taxes(const Inflation &inflation, const Taxes &taxes, I64 year);
 
 inline std::ostream &operator<<(std::ostream &os, const CalculatedTaxes &taxes) {
     os << "=============== " << taxes.year << " Tax Summary ===============" << std::endl;
