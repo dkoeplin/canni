@@ -50,7 +50,7 @@ void Cash::tax_gain(const Day &date, const USD &gain) const {
 }
 
 void RealEstate::tax_sale(const Day &date, const USD &gain) const {
-    static const auto kExclusion = 500000_USD;
+    static constexpr auto kExclusion = 500000_USD;
     if (const auto remain = gain - kExclusion; remain > 0_USD)
         parent_->taxes.long_term(date, remain);
 }
@@ -60,5 +60,11 @@ void Retirement::tax_sale(const Day &date, const USD &gain) const {
     parent_->taxes.income(date, gain);
 }
 
-void Stocks::tax_gain(const Day &date, const USD &gain) const { parent_->taxes.dividends(date, gain * 0.1); }
-void Stocks::tax_sale(const Day &date, const USD &gain) const { parent_->taxes.long_term(date, gain * 0.9); }
+void Stocks::tax_gain(const Day &date, const USD &) const {
+    // Dividends are modeled as a fixed yield on the current balance, independent of price direction.
+    const USD balance = parent_->current_entry(this).balance;
+    parent_->taxes.dividends(date, balance * (dividend_yield_ / 12.0));
+}
+void Stocks::tax_sale(const Day &date, const USD &gain) const {
+    parent_->taxes.long_term(date, gain * (1.0 - dividend_yield_));
+}

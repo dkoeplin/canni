@@ -30,6 +30,7 @@ add_library(finances_lib STATIC
         invest/account/Company.h
         invest/Taxes.cpp
         invest/Taxes.h
+        invest/XYSeries.h
 )
 target_link_libraries(finances_lib PUBLIC nvl)
 target_include_directories(finances_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

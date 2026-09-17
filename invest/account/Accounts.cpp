@@ -5,6 +5,7 @@
 #include <set>
 #include <unordered_map>
 
+#include "Options.h"
 #include "nvl/data/Tensor.h"
 
 #include "invest/Parsing.h"
@@ -75,30 +76,42 @@ void Accounts::import_csv(const std::string &filename, const std::vector<ColumnT
     }
 }
 
-USD Accounts::GroupTotals::cumulative(std::string_view group) const {
-    USD cumulative;
-    for (auto iter = groups.begin(); iter != groups.end(); ++iter) {
-        cumulative += iter->second;
-        return_if(iter->first == group, cumulative);
+XYSeries Accounts::totals(const std::string &name) const {
+    XYSeries series;
+    series.name = name;
+    for (U64 i = 0; i < dates_.size(); ++i) {
+        USD total;
+        for (const std::string_view &group : groups_) {
+            if (group != Options::_classtag.name && group != RealEstate::_classtag.name) {
+                for (const auto &account : accounts_by_group_.at(group)) {
+                    total += rows_.at(account->index()).at(i).balance;
+                }
+            }
+        }
+        series.points.emplace_back(dates_.at(i).to_string("%Y-%m-%d"), total.f64());
     }
-    return cumulative;
+    return series;
 }
 
-std::vector<Accounts::GroupTotals> Accounts::totals() const {
-    std::vector<GroupTotals> totals;
+std::vector<XYSeries> Accounts::grouped_totals() const {
+    std::vector<XYSeries> groups;
+    for (const auto &group : groups_) {
+        XYSeries series;
+        series.name = group;
+        groups.push_back(series);
+    }
     for (U64 i = 0; i < dates_.size(); ++i) {
-        GroupTotals &entry = totals.emplace_back();
-        entry.day = dates_[i];
-        for (const std::string_view &group : groups_) {
+        const auto day = dates_.at(i).to_string("%Y-%m-%d");
+        for (U64 j = 0; j < groups_.size(); ++j) {
+            const auto &group = groups_.at(j);
             USD group_total;
             for (const auto &account : accounts_by_group_.at(group)) {
                 group_total += rows_.at(account->index()).at(i).balance;
             }
-            entry.groups.emplace_back(group, group_total);
-            entry.total += group_total;
+            groups[j].points.emplace_back(day, group_total.f64());
         }
     }
-    return totals;
+    return groups;
 }
 
 USD Accounts::total() const {
@@ -122,7 +135,7 @@ void Accounts::seed(const Day &day) {
     }
 }
 
-void Accounts::project(const Day::Distance step) {
+Accounts &Accounts::project(const Day::Distance step) {
     ASSERT(!dates_.empty(), "Accounts::project requires account history.");
     const Day prev_day = dates_.back();
     const Day next_day = prev_day + step;
@@ -139,13 +152,15 @@ void Accounts::project(const Day::Distance step) {
     for (const auto &event : events_) {
         event->evaluate(next_day);
     }
+    return *this;
 }
 
-void Accounts::project_until(const Day &last, const Day::Distance &step) {
+Accounts &Accounts::project_until(const Day &last, const Day::Distance &step) {
     ASSERT(!dates_.empty(), "Accounts::project_until requires account history.");
     while (dates_.back() < last) {
         project(step);
     }
+    return *this;
 }
 
 Account &Accounts::add(const std::shared_ptr<Account> &account) {

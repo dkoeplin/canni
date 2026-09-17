@@ -11,6 +11,7 @@
 #include "invest/Day.h"
 #include "invest/Taxes.h"
 #include "invest/USD.h"
+#include "invest/XYSeries.h"
 
 struct MarketReturns {
   public:
@@ -66,15 +67,11 @@ struct Accounts {
         requires std::is_base_of_v<Account, T> || std::is_base_of_v<Event, T>
     T &add(Args... args) { return *static_cast<T *>(&add(std::make_shared<T>(this, args...))); }
 
-    struct GroupTotals {
-        pure USD cumulative(std::string_view group) const;
-
-        Day day;
-        USD total;
-        std::vector<std::pair<std::string_view, USD>> groups;
-    };
     /// Returns the total sums for each day, including the breakdown by group with each total.
-    pure std::vector<GroupTotals> totals() const;
+    pure XYSeries totals(const std::string &name) const;
+
+    /// Returns the totals for each group, ordered by the original group registration order.
+    pure std::vector<XYSeries> grouped_totals() const;
 
     /// Returns the current total across all accounts.
     pure USD total() const;
@@ -90,10 +87,10 @@ struct Accounts {
     void seed(const Day &day);
 
     /// Projects [step] from the current ending date using current account balances and registered events.
-    void project(Day::Distance step);
+    Accounts &project(Day::Distance step);
 
     /// Projects from the current ending date through [last] at a step of [step].
-    void project_until(const Day &last, const Day::Distance &step = 1_months);
+    Accounts &project_until(const Day &last, const Day::Distance &step = 1_months);
 
     /// Iterators over groups names.
     pure auto begin() const { return groups_.begin(); }

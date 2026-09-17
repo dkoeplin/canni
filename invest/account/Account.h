@@ -133,8 +133,14 @@ struct Retirement : AccountWithInterest {
 
 struct Stocks : AccountWithInterest {
     class_tag(Stocks, AccountWithInterest);
-    using AccountWithInterest::AccountWithInterest;
+
+    explicit Stocks(Accounts *parent, std::string name, Interest interest, double dividend_yield = 0.013)
+        : AccountWithInterest(parent, std::move(name), interest), dividend_yield_(dividend_yield) {}
+
     void tax_gain(const Day &date, const USD &gain) const override;
     void tax_sale(const Day &date, const USD &gain) const override;
     pure AssetType type() const override { return AssetType::kStocks; }
+
+  private:
+    double dividend_yield_;
 };

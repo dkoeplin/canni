@@ -28,6 +28,8 @@ struct Options : Account {
             return *this;
         }
 
+        pure I64 total() const { return iso + nso; }
+
         I64 iso = 0;
         I64 nso = 0;
     };
