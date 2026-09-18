@@ -9,6 +9,7 @@
 #include "invest/account/Account.h"
 #include "invest/event/Event.h"
 #include "invest/Day.h"
+#include "invest/Inflation.h"
 #include "invest/Taxes.h"
 #include "invest/USD.h"
 #include "invest/XYSeries.h"
@@ -68,10 +69,12 @@ struct Accounts {
     T &add(Args... args) { return *static_cast<T *>(&add(std::make_shared<T>(this, args...))); }
 
     /// Returns the total sums for each day, including the breakdown by group with each total.
-    pure XYSeries totals(const std::string &name) const;
+    /// If [inflation] is provided, presents all balances in today's dollars rather than raw balances.
+    pure XYSeries totals(const std::string &name, std::optional<Inflation> inflation) const;
 
     /// Returns the totals for each group, ordered by the original group registration order.
-    pure std::vector<XYSeries> grouped_totals() const;
+    /// If [inflation] is provided, presents all balances in today's dollars rather than raw balances.
+    pure std::vector<XYSeries> grouped_totals(std::optional<Inflation> inflation) const;
 
     /// Returns the current total across all accounts.
     pure USD total() const;
@@ -109,7 +112,7 @@ struct Accounts {
     }
 
     void set_market_returns(MarketReturns returns) { market_returns_ = std::move(returns); }
-    const MarketReturns *market_returns() const { return market_returns_ ? &*market_returns_ : nullptr; }
+    pure const MarketReturns *market_returns() const { return market_returns_ ? &*market_returns_ : nullptr; }
 
     Taxes taxes;
 

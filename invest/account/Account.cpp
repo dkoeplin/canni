@@ -1,5 +1,7 @@
 #include "Account.h"
 
+#include <cmath>
+
 #include "invest/Taxes.h"
 #include "Accounts.h"
 
@@ -67,4 +69,13 @@ void Stocks::tax_gain(const Day &date, const USD &) const {
 }
 void Stocks::tax_sale(const Day &date, const USD &gain) const {
     parent_->taxes.long_term(date, gain * (1.0 - dividend_yield_));
+}
+
+void Mortgage::originate(const USD &loan) {
+    const double r = params_.annual_rate / 12.0;
+    const I64 n = params_.duration_years * 12;
+    const double factor = std::pow(1.0 + r, static_cast<double>(n));
+    monthly_payment_ = USD::round(loan.f64() * r * factor / (factor - 1.0));
+    parent_->current_entry(this).balance = -loan;
+    parent_->current_entry(this).principal = -loan;
 }

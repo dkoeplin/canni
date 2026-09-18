@@ -53,7 +53,7 @@ TEST(Accounts, ImportCSVSkipsInvalidDates) {
     Accounts accts;
     Cash &cash = accts.add<Cash>("Test", 0.0_pct);
     accts.import_csv(path, {Accounts::Balance(cash)});
-    EXPECT_EQ(accts.totals().size(), 1);
+    EXPECT_EQ(accts.totals("", std::nullopt).points.size(), 1);
     EXPECT_EQ(accts.current_day(), Day("01/01/2024"));
 }
 
@@ -63,12 +63,12 @@ TEST(Accounts, TotalsReturnsPerDateBreakdown) {
     accts.seed(Day("01/01/2024"));
     accts.current_entry(&cash).balance = 1000_USD;
     accts.project_until(Day("03/01/2024"), 1_months);
-    const auto totals = accts.totals();
-    ASSERT_EQ(totals.size(), 3);
-    EXPECT_EQ(totals[0].day, Day("01/01/2024"));
-    EXPECT_EQ(totals[1].day, Day("02/01/2024"));
-    EXPECT_EQ(totals[2].day, Day("03/01/2024"));
-    EXPECT_EQ(totals[0].total, 1000_USD);
+    const auto totals = accts.totals("", std::nullopt);
+    ASSERT_EQ(totals.points.size(), 3);
+    EXPECT_EQ(totals.points[0].first, Day("01/01/2024").to_string());
+    EXPECT_EQ(totals.points[1].first, Day("02/01/2024").to_string());
+    EXPECT_EQ(totals.points[2].first, Day("03/01/2024").to_string());
+    EXPECT_NEAR(totals.points[0].second, 1000.0, 0.01);
 }
 
 TEST(Accounts, ProjectWithZeroInterestPreservesBalance) {

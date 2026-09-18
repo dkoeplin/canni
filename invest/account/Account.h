@@ -144,3 +144,44 @@ struct Stocks : AccountWithInterest {
   private:
     double dividend_yield_;
 };
+
+/// Base class for liabilities (loans, mortgages, etc.).
+/// Balance is stored as a negative value so Accounts::total() naturally subtracts it.
+/// deposit() reduces the outstanding debt; withdraw() is a no-op.
+abstract struct Liability : Account {
+    class_tag(Liability, Account);
+    using Account::Account;
+
+    pure USD withdraw(const USD &) const override { return 0_USD; }
+    void tax_gain(const Day &, const USD &) const override {}
+    void tax_sale(const Day &, const USD &) const override {}
+    pure Entry project(const DatedEntry &prev, const Day &) const override {
+        return {prev.principal, prev.balance};
+    }
+};
+
+struct Mortgage : Liability {
+    class_tag(Mortgage, Liability);
+
+    struct Params {
+        double down_pct = 0.20;     // Down payment as a fraction of purchase price
+        double annual_rate = 0.07;  // Annual interest rate
+        I64 duration_years = 30;    // Loan term in years
+        USD extra_monthly = 0_USD;  // Additional monthly principal payment above the required amount
+    };
+
+    explicit Mortgage(Accounts *parent, std::string name, Params params)
+        : Liability(parent, std::move(name)), params_(std::move(params)) {}
+
+    /// Called at purchase time with the actual loan amount to initialize the balance
+    /// and compute the fixed monthly payment via standard amortization.
+    void originate(const USD &loan);
+
+    pure USD owed() const { return -balance(); }
+    pure USD monthly_payment() const { return monthly_payment_; }
+    pure const Params &params() const { return params_; }
+
+  private:
+    Params params_;
+    USD monthly_payment_ = 0_USD;
+};

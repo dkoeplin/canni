@@ -6,6 +6,7 @@
 #include <unordered_map>
 
 #include "Options.h"
+#include "invest/Inflation.h"
 #include "nvl/data/Tensor.h"
 
 #include "invest/Parsing.h"
@@ -76,15 +77,17 @@ void Accounts::import_csv(const std::string &filename, const std::vector<ColumnT
     }
 }
 
-XYSeries Accounts::totals(const std::string &name) const {
+XYSeries Accounts::totals(const std::string &name, std::optional<Inflation> inflation) const {
     XYSeries series;
     series.name = name;
     for (U64 i = 0; i < dates_.size(); ++i) {
+        const Day &day = dates_.at(i);
         USD total;
         for (const std::string_view &group : groups_) {
             if (group != Options::_classtag.name && group != RealEstate::_classtag.name) {
                 for (const auto &account : accounts_by_group_.at(group)) {
-                    total += rows_.at(account->index()).at(i).balance;
+                    auto balance = rows_.at(account->index()).at(i).balance;
+                    total += inflation ? inflation->inverse(day, balance) : balance;
                 }
             }
         }
@@ -93,7 +96,7 @@ XYSeries Accounts::totals(const std::string &name) const {
     return series;
 }
 
-std::vector<XYSeries> Accounts::grouped_totals() const {
+std::vector<XYSeries> Accounts::grouped_totals(std::optional<Inflation> inflation) const {
     std::vector<XYSeries> groups;
     for (const auto &group : groups_) {
         XYSeries series;
@@ -101,14 +104,16 @@ std::vector<XYSeries> Accounts::grouped_totals() const {
         groups.push_back(series);
     }
     for (U64 i = 0; i < dates_.size(); ++i) {
-        const auto day = dates_.at(i).to_string("%Y-%m-%d");
+        const auto &day = dates_.at(i);
+        const auto day_str = day.to_string("%Y-%m-%d");
         for (U64 j = 0; j < groups_.size(); ++j) {
             const auto &group = groups_.at(j);
             USD group_total;
             for (const auto &account : accounts_by_group_.at(group)) {
-                group_total += rows_.at(account->index()).at(i).balance;
+                const auto balance = rows_.at(account->index()).at(i).balance;
+                group_total += inflation ? inflation->inverse(day, balance) : balance;
             }
-            groups[j].points.emplace_back(day, group_total.f64());
+            groups[j].points.emplace_back(day_str, group_total.f64());
         }
     }
     return groups;
