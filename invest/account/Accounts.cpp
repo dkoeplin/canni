@@ -77,8 +77,8 @@ void Accounts::import_csv(const std::string &filename, const std::vector<ColumnT
     }
 }
 
-XYSeries Accounts::totals(const std::string &name, std::optional<Inflation> inflation) const {
-    XYSeries series;
+Series<Day, USD> Accounts::totals(const std::string &name, std::optional<Inflation> inflation) const {
+    Series<Day, USD> series;
     series.name = name;
     for (U64 i = 0; i < dates_.size(); ++i) {
         const Day &day = dates_.at(i);
@@ -91,21 +91,20 @@ XYSeries Accounts::totals(const std::string &name, std::optional<Inflation> infl
                 }
             }
         }
-        series.points.emplace_back(dates_.at(i).to_string("%Y-%m-%d"), total.f64());
+        series.points.emplace_back(day, total);
     }
     return series;
 }
 
-std::vector<XYSeries> Accounts::grouped_totals(std::optional<Inflation> inflation) const {
-    std::vector<XYSeries> groups;
+std::vector<Series<Day, USD>> Accounts::grouped_totals(std::optional<Inflation> inflation) const {
+    std::vector<Series<Day, USD>> groups;
     for (const auto &group : groups_) {
-        XYSeries series;
+        Series<Day, USD> series;
         series.name = group;
         groups.push_back(series);
     }
     for (U64 i = 0; i < dates_.size(); ++i) {
         const auto &day = dates_.at(i);
-        const auto day_str = day.to_string("%Y-%m-%d");
         for (U64 j = 0; j < groups_.size(); ++j) {
             const auto &group = groups_.at(j);
             USD group_total;
@@ -113,7 +112,7 @@ std::vector<XYSeries> Accounts::grouped_totals(std::optional<Inflation> inflatio
                 const auto balance = rows_.at(account->index()).at(i).balance;
                 group_total += inflation ? inflation->inverse(day, balance) : balance;
             }
-            groups[j].points.emplace_back(day_str, group_total.f64());
+            groups[j].points.emplace_back(day, group_total);
         }
     }
     return groups;

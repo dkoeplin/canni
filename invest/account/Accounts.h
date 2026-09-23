@@ -12,7 +12,7 @@
 #include "invest/Inflation.h"
 #include "invest/Taxes.h"
 #include "invest/USD.h"
-#include "invest/XYSeries.h"
+#include "invest/Series.h"
 
 struct MarketReturns {
   public:
@@ -70,11 +70,11 @@ struct Accounts {
 
     /// Returns the total sums for each day, including the breakdown by group with each total.
     /// If [inflation] is provided, presents all balances in today's dollars rather than raw balances.
-    pure XYSeries totals(const std::string &name, std::optional<Inflation> inflation) const;
+    pure Series<Day, USD> totals(const std::string &name, std::optional<Inflation> inflation) const;
 
     /// Returns the totals for each group, ordered by the original group registration order.
     /// If [inflation] is provided, presents all balances in today's dollars rather than raw balances.
-    pure std::vector<XYSeries> grouped_totals(std::optional<Inflation> inflation) const;
+    pure std::vector<Series<Day, USD>> grouped_totals(std::optional<Inflation> inflation) const;
 
     /// Returns the current total across all accounts.
     pure USD total() const;

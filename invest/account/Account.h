@@ -50,8 +50,11 @@ abstract struct Account {
     /// Taxes incurred during a "gain" (usually a projected increase).
     virtual void tax_gain(const Day &day, const USD &gain) const = 0;
 
-    /// Taxes incurred during a "sale" (usually a withdrawal).
+    /// Taxes incurred on the gain portion during a withdrawal.
     virtual void tax_sale(const Day &day, const USD &gain) const = 0;
+
+    /// Taxes incurred on the principal portion during a withdrawal (pre-tax accounts only).
+    virtual void tax_principal(const Day &, const USD &) const {}
 
     pure std::string_view category() const { return _get_classtag().name; }
     pure const std::string &name() const { return name_; }
@@ -125,7 +128,9 @@ struct Retirement : AccountWithInterest {
 
     void tax_gain(const Day &, const USD &) const override { }
     void tax_sale(const Day &date, const USD &gain) const override;
+    void tax_principal(const Day &date, const USD &principal) const override;
     pure AssetType type() const override { return AssetType::kStocks; }
+    pure Kind kind() const { return kind_; }
 
   protected:
     Kind kind_;

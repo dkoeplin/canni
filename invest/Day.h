@@ -30,13 +30,13 @@ enum class Month : I64 {
 class Day {
   public:
     struct Distance {
-        // TODO: Add days
-        // I64 days = 0;
+        pure Distance operator/(I64 d) const;
+        I64 days = 0;
         I64 months = 0;
         I64 years = 0;
     };
 
-    // static constexpr Distance days(I64 n) { return Distance{.days = n}; }
+    static constexpr Distance days(I64 n) { return Distance{.days = n}; }
     static constexpr Distance months(I64 n) { return Distance{.months = n}; }
     static constexpr Distance years(I64 n) { return Distance{.years = n}; }
 
@@ -54,13 +54,11 @@ class Day {
 
     /// Returns a date that is [duration] after this date.
     pure Day operator+(const Distance &duration) const;
-    Day &operator+=(const Distance &duration) {
-        *this = *this + duration;
-        return *this;
-    }
+    Day &operator+=(const Distance &duration) { *this = *this + duration; return *this; }
 
-    // TODO: Implement
-    // pure Day operator-(const Distance &duration) const;
+    /// Returns a date that is [duration] before this date.
+    pure Day operator-(const Distance &duration) const;
+    Day &operator-=(const Distance &duration) { *this = *this - duration; return *this; }
 
     /// Returns the day of the month
     pure I64 day() const;
@@ -89,7 +87,7 @@ class Day {
     I64 day_;   // Day of the month
 };
 
-// constexpr Day::Distance operator""_days(const unsigned long long n) { return Day::days(n); }
+consteval Day::Distance operator""_days(const unsigned long long n) { return Day::days(n); }
 consteval Day::Distance operator""_months(const unsigned long long n) { return Day::months(n); }
 consteval Day::Distance operator""_years(const unsigned long long n) { return Day::years(n); }
 

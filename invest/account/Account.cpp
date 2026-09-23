@@ -22,6 +22,7 @@ USD AccountWithInterest::withdraw(const USD &amount) const {
     const USD withdrawn_gain      = actual * gain_pct;
     const USD withdrawn_principal = actual * (1.0 - gain_pct);
     tax_sale(day, withdrawn_gain);
+    tax_principal(day, withdrawn_principal);
     entry.balance -= actual;
     entry.principal -= withdrawn_principal;
     return actual;
@@ -60,6 +61,10 @@ void RealEstate::tax_sale(const Day &date, const USD &gain) const {
 void Retirement::tax_sale(const Day &date, const USD &gain) const {
     return_if(kind_ == kPostTax);
     parent_->taxes.income(date, gain);
+}
+void Retirement::tax_principal(const Day &date, const USD &principal) const {
+    return_if(kind_ == kPostTax);
+    parent_->taxes.income(date, principal);
 }
 
 void Stocks::tax_gain(const Day &date, const USD &) const {

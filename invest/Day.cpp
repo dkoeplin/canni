@@ -8,6 +8,11 @@
 #include "nvl/data/Maybe.h"
 #include "nvl/macros/ReturnIf.h"
 
+pure Day::Distance Day::Distance::operator/(I64 d) const {
+    const I64 m = (12 * years + months) / d;
+    return { .days = days / d, .months = m % 12, .years = m / 12 };
+}
+
 nvl::Maybe<Day> Day::parse(std::string_view str, const nvl::Maybe<std::string>& format) {
     if (!format.has_value()) {
         const auto s0 = str.find('/');
@@ -70,6 +75,18 @@ static I64 to_jdn(const I64 y, const I64 m, const I64 d) {
     return d + (153 * M + 2) / 5 + 365 * Y + Y / 4 - Y / 100 + Y / 400 - 32045;
 }
 
+static Day from_jdn(const I64 jdn) {
+    const I64 a = jdn + 32044;
+    const I64 b = (4 * a + 3) / 146097;
+    const I64 c = a - (146097 * b) / 4;
+    const I64 d = (4 * c + 3) / 1461;
+    const I64 e = c - (1461 * d) / 4;
+    const I64 m = (5 * e + 2) / 153;
+    return Day(e - (153 * m + 2) / 5 + 1,
+               static_cast<Month>(m + 3 - 12 * (m / 10) - 1),
+               100 * b + d - 4800 + m / 10);
+}
+
 pure I64 Day::operator-(const Day &rhs) const {
     return to_jdn(year_, month_ + 1, day_) - to_jdn(rhs.year_, rhs.month_ + 1, rhs.day_);
 }
@@ -78,5 +95,17 @@ pure Day Day::operator+(const Distance &duration) const {
     Day next = *this;
     next.month_ = (month_ + duration.months) % 12;
     next.year_ += duration.years + (month_ + duration.months) / 12;
+    if (duration.days != 0)
+        next = from_jdn(to_jdn(next.year_, next.month_ + 1, next.day_) + duration.days);
+    return next;
+}
+
+pure Day Day::operator-(const Distance &duration) const {
+    Day next = *this;
+    const I64 total_months = month_ - duration.months;
+    next.month_ = ((total_months % 12) + 12) % 12;
+    next.year_ += duration.years * -1 + (total_months - next.month_) / 12;
+    if (duration.days != 0)
+        next = from_jdn(to_jdn(next.year_, next.month_ + 1, next.day_) - duration.days);
     return next;
 }
