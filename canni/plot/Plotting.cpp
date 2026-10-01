@@ -3,15 +3,13 @@
 #include <algorithm>
 #include <functional>
 #include <memory>
-#include <_stdio.h>
+#include <cstdio>
 
 #include <ranges>
 
 #include "canni/Macros.h"
 
-namespace canni {
-
-namespace detail {
+namespace canni::detail {
 
 std::string axis_name(Axis axis) {
     switch (axis) {
@@ -58,6 +56,6 @@ void AxisFormat<USD>::setup_axis(FILE* plot, Axis axis) {
     fprintf(plot, "set format %s '$%%.1s%%c'\n", axis_name(axis).c_str());
 }
 
-} // namespace detail
+} // namespace canni::detail
 
-} // namespace canni
+

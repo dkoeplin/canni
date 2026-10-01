@@ -13,7 +13,7 @@ namespace canni {
 class USD {
 public:
     static constexpr USD dollars(const I64 dollars) { return USD(dollars * 100); }
-    static constexpr USD round(const F64 dollars) { return USD(static_cast<I64>(dollars * 100)); }
+    static constexpr USD floor(const F64 dollars) { return USD(static_cast<I64>(dollars * 100)); }
     static USD parse(const std::string &str);
 
     USD() = default;
@@ -22,8 +22,8 @@ public:
     USD &operator=(const USD &rhs) noexcept = default;
 
     pure USD operator-() const { return USD(-cents_); }
-    pure USD operator*(const double rhs) const { return round((cents_ * rhs) / 100.0); }
-    pure USD operator/(const double rhs) const { return round((cents_ / rhs) / 100.0); }
+    pure USD operator*(const double rhs) const { return floor((cents_ * rhs) / 100.0); }
+    pure USD operator/(const double rhs) const { return floor((cents_ / rhs) / 100.0); }
     pure USD operator*(const int rhs) const { return USD(cents_ * rhs); }
     pure USD operator/(const int rhs) const { return USD(cents_ / rhs); }
     pure USD operator*(const I64 rhs) const { return USD(cents_ * rhs); }
@@ -48,6 +48,6 @@ private:
 inline std::ostream &operator<<(std::ostream &os, const USD &usd) { return os << usd.to_string(); }
 
 consteval USD operator""_USD(const unsigned long long n) { return USD::dollars(n); }
-consteval USD operator""_USD(const long double n) { return USD::round(n); }
+consteval USD operator""_USD(const long double n) { return USD::floor(n); }
 
 } // namespace canni

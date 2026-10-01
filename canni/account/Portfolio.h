@@ -145,8 +145,6 @@ abstract struct Portfolio {
 
     pure std::vector<Series<I64, USD>> grouped_expenses() const;
 
-    void print_options(Day day, USD value) const;
-
     /// In a given simulated cycle, determines how to move balances between accounts after all other events.
     virtual void invest() const = 0;
 

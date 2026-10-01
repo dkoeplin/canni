@@ -8,21 +8,21 @@ namespace canni {
 USD Interest::estimate(const Day& a, const Day& b, const USD& initial) const {
     if (compounds()) {
         const I64 n = times_compounded(a, b);
-        return USD::round(initial.f64() * std::pow(1 + rate_per_period(), n));
+        return USD::floor(initial.f64() * std::pow(1 + rate_per_period(), n));
     }
     const F64 rate = apy_ / 365.0;                        // Rough estimate of daily percent yield
     const F64 time = static_cast<F64>(b - a);             // Elapsed days
-    return USD::round(initial.f64() * (1 + rate * time)); // Estimated interest over principal
+    return USD::floor(initial.f64() * (1 + rate * time)); // Estimated interest over principal
 }
 
 pure USD Interest::inverse(const Day &a, const Day &b, const USD &amount) const {
     if (compounds()) {
         const I64 n = times_compounded(a, b);
-        return USD::round(amount.f64() / std::pow(1 + rate_per_period(), n));
+        return USD::floor(amount.f64() / std::pow(1 + rate_per_period(), n));
     }
     const F64 rate = apy_ / 365.0;                        // Rough estimate of daily percent yield
     const F64 time = static_cast<F64>(b - a);             // Elapsed days
-    return USD::round(amount.f64() / (1 + rate * time));
+    return USD::floor(amount.f64() / (1 + rate * time));
 }
 
 

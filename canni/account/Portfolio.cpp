@@ -169,7 +169,7 @@ Portfolio &Portfolio::project_until(const Day last, const Day::Distance &step) {
 }
 
 Account &Portfolio::add(const std::shared_ptr<Account> &account) {
-    static constexpr std::vector<Entry> kEmptyEntries = {};
+    static const std::vector<Entry> kEmptyEntries = {};
 
     const auto &ref = accounts_.emplace_back(account);
     ref->set_index(accounts_.size() - 1);
@@ -238,27 +238,6 @@ std::vector<Series<I64, USD>> Portfolio::grouped_expenses() const {
         }
     }
     return result;
-}
-
-void Portfolio::print_options(Day day, USD value) const {
-    std::cout << "Options Balances\n----------------\n";
-    USD pre_total, post_total;
-    for (const Options &options : get<Options>()) {
-        if (const I64 t = options.avail(day).total(); t > 0) {
-            const auto v  = value * t;
-            const auto e  = options.strike() * t;
-            const auto x0 = (36.50_USD - options.strike()) * t * 0.37;
-            const auto x1 = (value - 36.50_USD) * t * 0.37;
-            std::cout << "  " << options.name() << "(" << options.strike() << "): "
-                      << t << " x $65\t = " << v << " - " << e << "\t = " << (v - e)
-                      << " - " << x0 << " - " << x1 << "\t = " << (v - e - x0 - x1) << "\n";
-            pre_total  += v;
-            post_total += (v - e - x0 - x1);
-        }
-    }
-    std::cout << "  Estimated Total (before taxes): " << pre_total  << "\n";
-    std::cout << "  Estimated Total (after taxes):  " << post_total << "\n";
-
 }
 
 pure USD Portfolio::withdraw(const std::string &name, USD amount) {

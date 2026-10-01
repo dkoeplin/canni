@@ -25,6 +25,7 @@ template <typename P, typename X, typename XStep = X, typename Y = Day>
     requires PortfolioSubclass<P>
 struct Experiment : XYPlotOptions {
     void run(const bool plot = true) {
+        ASSERT(params.has_value(), "Experiment params was not yet set");
         params->base.verbose = false;
         series.name = "Min Retirement"; // TODO: Configure based on Y or y_func
         X x = x_range.min;

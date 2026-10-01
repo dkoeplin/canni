@@ -64,7 +64,7 @@ void RealEstate::tax_sale(const Day &date, const USD &gain) const {
 USD Retirement::withdraw(const USD &amount) const {
     const auto today = parent_->current_day();
     const USD actual = Investment::withdraw(amount);
-    parent_->taxes.withdraw_retirement(today, amount);
+    parent_->taxes.withdraw_retirement(today, actual);
     return actual;
 }
 
@@ -90,7 +90,7 @@ void Mortgage::originate(const USD &loan) {
     const double r = params_.annual_rate / 12.0;
     const I64 n = params_.duration_years * 12;
     const double factor = std::pow(1.0 + r, static_cast<double>(n));
-    monthly_payment_ = USD::round(loan.f64() * r * factor / (factor - 1.0));
+    monthly_payment_ = USD::floor(loan.f64() * r * factor / (factor - 1.0));
     parent_->current_entry(this).balance = -loan;
     parent_->current_entry(this).principal = -loan;
 }

@@ -19,25 +19,25 @@ TEST(USD, Comparison) {
 }
 
 TEST(USD, Round) {
-    EXPECT_EQ(USD::round(1.005), USD::dollars(1));  // rounds to nearest cent
-    EXPECT_EQ(USD::round(1.456), USD::round(1.46));
-    EXPECT_EQ(USD::round(-1.50), USD::round(-1.50)); // -150 cents
-    EXPECT_DOUBLE_EQ(USD::round(-1.50).f64(), -1.50);
+    EXPECT_EQ(USD::floor(1.005), USD::dollars(1));  // rounds to nearest cent
+    EXPECT_EQ(USD::floor(1.456), USD::floor(1.46));
+    EXPECT_EQ(USD::floor(-1.50), USD::floor(-1.50)); // -150 cents
+    EXPECT_DOUBLE_EQ(USD::floor(-1.50).f64(), -1.50);
 }
 
 TEST(USD, F64) {
     EXPECT_DOUBLE_EQ(USD::dollars(10).f64(), 10.0);
-    EXPECT_DOUBLE_EQ(USD::round(3.14).f64(), 3.14);
+    EXPECT_DOUBLE_EQ(USD::floor(3.14).f64(), 3.14);
 }
 
 TEST(USD, ParseSimple) {
     EXPECT_EQ(USD::parse("100"), USD::dollars(100));
-    EXPECT_EQ(USD::parse("3.14"), USD::round(3.14));
-    EXPECT_EQ(USD::parse("0.99"), USD::round(0.99));
+    EXPECT_EQ(USD::parse("3.14"), USD::floor(3.14));
+    EXPECT_EQ(USD::parse("0.99"), USD::floor(0.99));
 }
 
 TEST(USD, ParseNegative) {
-    EXPECT_EQ(USD::parse("-50.25"), USD::round(-50.25));
+    EXPECT_EQ(USD::parse("-50.25"), USD::floor(-50.25));
     EXPECT_EQ(USD::parse("-100"), USD::dollars(-100));
 }
 
@@ -46,23 +46,23 @@ TEST(USD, ParseEmpty) {
 }
 
 TEST(USD, ParseDollarSign) {
-    EXPECT_EQ(USD::parse("$1234.56"), USD::round(1234.56));
-    EXPECT_EQ(USD::parse("$-50.00"), USD::round(-50.0));
+    EXPECT_EQ(USD::parse("$1234.56"), USD::floor(1234.56));
+    EXPECT_EQ(USD::parse("$-50.00"), USD::floor(-50.0));
 }
 
 TEST(USD, ToString) {
     EXPECT_EQ(USD::dollars(0).to_string(), "$0.00");
     EXPECT_EQ(USD::dollars(1).to_string(), "$1.00");
-    EXPECT_EQ(USD::round(3.14).to_string(), "$3.14");
-    EXPECT_EQ(USD::round(3.05).to_string(), "$3.05");
+    EXPECT_EQ(USD::floor(3.14).to_string(), "$3.14");
+    EXPECT_EQ(USD::floor(3.05).to_string(), "$3.05");
     EXPECT_EQ(USD::dollars(-5).to_string(), "-$5.00");
-    EXPECT_EQ(USD::round(-1.50).to_string(), "-$1.50");
-    EXPECT_EQ(USD::round(-3.07).to_string(), "-$3.07");
+    EXPECT_EQ(USD::floor(-1.50).to_string(), "-$1.50");
+    EXPECT_EQ(USD::floor(-3.07).to_string(), "-$3.07");
 }
 
 TEST(USD, UDL) {
     EXPECT_EQ(100_USD, USD::dollars(100));
-    EXPECT_EQ(3.14_USD, USD::round(3.14));
+    EXPECT_EQ(3.14_USD, USD::floor(3.14));
 }
 
 TEST(USD, CompoundAssign) {
