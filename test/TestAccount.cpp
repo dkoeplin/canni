@@ -1,7 +1,9 @@
 #include <fstream>
 #include <gtest/gtest.h>
 
-#include "../invest/account/Accounts.h"
+#include "canni/account/Portfolio.h"
+
+using namespace canni;
 
 namespace {
 
@@ -15,7 +17,7 @@ std::string write_csv(const std::string &content) {
 } // namespace
 
 TEST(Accounts, SeedInitializesDate) {
-    Accounts accts;
+    Portfolio accts;
     Cash &cash = accts.add<Cash>("Test", 0.0_pct);
     accts.seed(Day("01/01/2024"));
     accts.current_entry(&cash).balance = 1000_USD;
@@ -29,18 +31,18 @@ TEST(Accounts, ImportCSVSetsBalance) {
         "01/01/2024,1000.00\n"
         "02/01/2024,1100.00\n"
     );
-    Accounts accts;
+    Portfolio accts;
     Cash &cash = accts.add<Cash>("Test", 0.0_pct);
-    accts.import_csv(path, {Accounts::Balance(cash)});
+    accts.import_csv(path, {Portfolio::Balance(cash)});
     EXPECT_EQ(cash.balance(), 1100.00_USD);
     EXPECT_EQ(accts.current_day(), Day("02/01/2024"));
 }
 
 TEST(Accounts, ImportCSVSetsPrincipal) {
     const auto path = write_csv("01/01/2024,1200.00,1000.00\n");
-    Accounts accts;
+    Portfolio accts;
     Cash &cash = accts.add<Cash>("Test", 0.0_pct);
-    accts.import_csv(path, {Accounts::Balance(cash), Accounts::Principal(cash)});
+    accts.import_csv(path, {Portfolio::Balance(cash), Portfolio::Principal(cash)});
     EXPECT_EQ(cash.balance(), 1200.00_USD);
     EXPECT_EQ(accts.current_entry(&cash).principal, 1000.00_USD);
 }
@@ -50,15 +52,15 @@ TEST(Accounts, ImportCSVSkipsInvalidDates) {
         "not-a-date,999.00\n"
         "01/01/2024,1000.00\n"
     );
-    Accounts accts;
+    Portfolio accts;
     Cash &cash = accts.add<Cash>("Test", 0.0_pct);
-    accts.import_csv(path, {Accounts::Balance(cash)});
+    accts.import_csv(path, {Portfolio::Balance(cash)});
     EXPECT_EQ(accts.totals("", std::nullopt).points.size(), 1);
     EXPECT_EQ(accts.current_day(), Day("01/01/2024"));
 }
 
 TEST(Accounts, TotalsReturnsPerDateBreakdown) {
-    Accounts accts;
+    Portfolio accts;
     Cash &cash = accts.add<Cash>("Test", 0.0_pct);
     accts.seed(Day("01/01/2024"));
     accts.current_entry(&cash).balance = 1000_USD;
@@ -72,7 +74,7 @@ TEST(Accounts, TotalsReturnsPerDateBreakdown) {
 }
 
 TEST(Accounts, ProjectWithZeroInterestPreservesBalance) {
-    Accounts accts;
+    Portfolio accts;
     Cash &cash = accts.add<Cash>("Test", 0.0_pct);
     accts.seed(Day("01/01/2024"));
     accts.current_entry(&cash).balance = 1000_USD;
@@ -81,7 +83,7 @@ TEST(Accounts, ProjectWithZeroInterestPreservesBalance) {
 }
 
 TEST(Accounts, ProjectAppliesInterest) {
-    Accounts accts;
+    Portfolio accts;
     Cash &cash = accts.add<Cash>("Test", Interest::Monthly(0.12));
     accts.seed(Day("01/01/2024"));
     accts.current_entry(&cash).balance = 1000_USD;
@@ -92,7 +94,7 @@ TEST(Accounts, ProjectAppliesInterest) {
 }
 
 TEST(Accounts, DepositIncreasesBalance) {
-    Accounts accts;
+    Portfolio accts;
     Cash &cash = accts.add<Cash>("Test", 0.0_pct);
     accts.seed(Day("01/01/2024"));
     accts.current_entry(&cash).balance = 1000_USD;
@@ -102,7 +104,7 @@ TEST(Accounts, DepositIncreasesBalance) {
 }
 
 TEST(Accounts, WithdrawReducesBalance) {
-    Accounts accts;
+    Portfolio accts;
     Cash &cash = accts.add<Cash>("Test", 0.0_pct);
     accts.seed(Day("01/01/2024"));
     accts.current_entry(&cash).balance = 1000_USD;
@@ -111,7 +113,7 @@ TEST(Accounts, WithdrawReducesBalance) {
 }
 
 TEST(Accounts, WithdrawCannotExceedBalance) {
-    Accounts accts;
+    Portfolio accts;
     Cash &cash = accts.add<Cash>("Test", 0.0_pct);
     accts.seed(Day("01/01/2024"));
     accts.current_entry(&cash).balance = 500_USD;
@@ -120,7 +122,7 @@ TEST(Accounts, WithdrawCannotExceedBalance) {
 }
 
 TEST(Accounts, MarketReturnsOverridesAPY) {
-    Accounts accts;
+    Portfolio accts;
     Stocks &stocks = accts.add<Stocks>("Test", Interest::Monthly(0.0));
     accts.seed(Day("01/01/2024"));
     accts.current_entry(&stocks).balance = 1000_USD;

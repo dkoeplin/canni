@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 
-#include "USD.h"
+#include "canni/data/USD.h"
+
+using namespace canni;
 
 TEST(USD, Arithmetic) {
     EXPECT_EQ(USD::dollars(10) + USD::dollars(5), USD::dollars(15));

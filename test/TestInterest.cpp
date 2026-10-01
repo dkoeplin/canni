@@ -1,8 +1,10 @@
 #include <gtest/gtest.h>
 
-#include "Interest.h"
-#include "Day.h"
-#include "USD.h"
+#include "canni/data/Interest.h"
+#include "canni/data/Day.h"
+#include "canni/data/USD.h"
+
+using namespace canni;
 
 namespace {
 

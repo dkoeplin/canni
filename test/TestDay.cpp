@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 
-#include "Day.h"
+#include "canni/data/Day.h"
+
+using namespace canni;
 
 namespace {
 
