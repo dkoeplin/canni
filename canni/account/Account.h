@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <memory>
 #include <ranges>
 #include <utility>
 
@@ -12,6 +13,10 @@
 namespace canni {
 
 struct Portfolio;
+
+struct AccountSnapshot {
+    virtual ~AccountSnapshot() = default;
+};
 
 struct Entry {
     USD principal;
@@ -38,6 +43,9 @@ abstract struct Account {
 
     explicit Account(Portfolio *parent, std::string name) : parent_(parent), name_(std::move(name)) {}
     virtual ~Account() = default;
+
+    pure virtual std::shared_ptr<AccountSnapshot> save() const { return nullptr; }
+    virtual void restore(const AccountSnapshot &) {}
 
     pure virtual Kind kind() const = 0;
 

@@ -172,10 +172,17 @@ Account &Portfolio::add(const std::shared_ptr<Account> &account) {
     static const std::vector<Entry> kEmptyEntries = {};
 
     const auto &ref = accounts_.emplace_back(account);
-    ref->set_index(accounts_.size() - 1);
+    const U64 idx = accounts_.size() - 1;
+    ref->set_index(idx);
 
     accounts_by_group_.resize(Account::kNUM_ACCOUNT_TYPES);
     accounts_by_group_[account->kind()].push_back(ref.get());
+
+    if (params_.history) {
+        const auto &snaps = params_.history->account_snapshots;
+        if (idx < snaps.size() && snaps[idx])
+            ref->restore(*snaps[idx]);
+    }
 
     // Ensure the new account has a full history to date
     auto &row = rows_.emplace_back(kEmptyEntries);

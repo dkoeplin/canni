@@ -11,29 +11,25 @@
 
 namespace canni {
 
-struct Options : Account {
+struct OptionsCount {
+    auto operator<=>(const OptionsCount &) const = default;
+    OptionsCount operator+(const OptionsCount &rhs) const { OptionsCount r = *this; return r += rhs; }
+    OptionsCount operator-(const OptionsCount &rhs) const { OptionsCount r = *this; return r -= rhs; }
+    OptionsCount &operator+=(const OptionsCount &rhs) { iso += rhs.iso; nso += rhs.nso; return *this; }
+    OptionsCount &operator-=(const OptionsCount &rhs) { iso -= rhs.iso; nso -= rhs.nso; return *this; }
+    pure I64 total() const { return iso + nso; }
+    I64 iso = 0;
+    I64 nso = 0;
+};
+
+struct OptionsSnapshot : AccountSnapshot {
+    std::map<Day, OptionsCount> vested_;
+    std::map<Day, OptionsCount> sold_;
+};
+
+struct Options : Account, OptionsSnapshot {
+    using Count = OptionsCount;
     enum Type { kNSO, kISO, kMix };
-    struct Count {
-        auto operator<=>(const Count &rhs) const = default;
-        bool operator==(const Count &rhs) const = default;
-        Count operator+(const Count &rhs) const { Count result = *this; return result += rhs; }
-        Count operator-(const Count &rhs) const { Count result = *this; return result -= rhs; }
-        Count &operator+=(const Count &rhs) {
-            iso += rhs.iso;
-            nso += rhs.nso;
-            return *this;
-        }
-        Count &operator-=(const Count &rhs) {
-            iso -= rhs.iso;
-            nso -= rhs.nso;
-            return *this;
-        }
-
-        pure I64 total() const { return iso + nso; }
-
-        I64 iso = 0;
-        I64 nso = 0;
-    };
 
     /// The results of a sale. Factors in that a sale may have an upfront cost which must be paid first.
     struct [[nodiscard]] Sale {
@@ -46,11 +42,12 @@ struct Options : Account {
         USD proceeds;
     };
 
-    /// Parses a vesting schedule CSV with the expected format:
+    explicit Options(Portfolio *parent, Company company, const std::string &name, Type type, USD strike);
+
+    /// Parses a vesting schedule CSV and populates the vesting schedule.
     ///   Pure grant  (5 cols): row, date, new_vested, cumulative, exercised
     ///   Mixed grant (7 cols): row, date, new_vested, ISO_vested, NSO_vested, cumulative, exercised
-    explicit Options(Portfolio *parent, Company company, const std::string &name, Type type, USD strike,
-                     const std::string &csv_path = "");
+    void load(const std::string &csv_path);
 
     static constexpr Kind kKind = kOptions;
     pure Kind kind() const override { return kOptions; }
@@ -85,13 +82,20 @@ struct Options : Account {
     void tax_gain(const Day &, const USD &) const override { /* Unrealized gains on Options are not taxable. */ }
     void tax_sale(const Day &, const USD &) const override { /* Handled directly in `sell` for now. */ }
 
+    std::shared_ptr<AccountSnapshot> save() const override {
+        return std::make_shared<OptionsSnapshot>(*this);
+    }
+    void restore(const AccountSnapshot &other) override {
+        const auto &rhs = static_cast<const OptionsSnapshot &>(other);
+        vested_ = rhs.vested_;
+        sold_   = rhs.sold_;
+    }
+
   private:
-    Company company_;               /// Reference to company
-    Type type_;                     /// Option type (ISO, NSO, mixed)
-    USD strike_;                    /// Strike price
-    std::optional<Day> expires_;    /// Expiration date of options
-    std::map<Day, Count> vested_;   /// Cumulative vested count
-    std::map<Day, Count> sold_;     /// Cumulative sold
+    Company company_;            /// Reference to company
+    Type type_;                  /// Option type (ISO, NSO, mixed)
+    USD strike_;                 /// Strike price
+    std::optional<Day> expires_; /// Expiration date of options
 };
 
 inline std::ostream &operator<<(std::ostream &os, const Options::Count &count) {

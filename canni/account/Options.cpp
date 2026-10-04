@@ -11,43 +11,40 @@
 
 namespace canni {
 
-Options::Options(Portfolio *parent, Company company, const std::string &name, const Type type, USD strike, const std::string &csv_path)
+Options::Options(Portfolio *parent, Company company, const std::string &name, const Type type, USD strike)
     : Account(parent, name), company_(std::move(company)), type_(type), strike_(std::move(strike)) {
     company_.add_options(this);
-    return_if(csv_path.empty());
+}
 
+void Options::load(const std::string &csv_path) {
     const auto data = parse_data(csv_path, '\t');
-    const I64 expected_cols = type == kMix ? 7 : 5;
+    const I64 expected_cols = type_ == kMix ? 7 : 5;
     const I64 actual_cols = data.empty() ? 0 : static_cast<I64>(data[0].size());
     ASSERT(actual_cols == expected_cols,
-        csv_path << ": Found malformed options file while loading options \"" << name << "\":\n"
+        csv_path << ": Found malformed options file while loading options \"" << name_ << "\":\n"
         "Expected " << expected_cols << " columns, but got " << actual_cols << ".");
 
-    std::map<Day, Count> schedule; /// Date -> new shares vesting on that date
+    std::map<Day, Count> schedule;
     for (const auto &i : data) {
         if (const auto day = Day::parse(i[1], "%b %d %Y")) {
-            if (type == kISO) {
+            if (type_ == kISO) {
                 schedule[*day].iso = std::stoll(i[2]);
-            } else if (type == kNSO) {
+            } else if (type_ == kNSO) {
                 schedule[*day].nso = std::stoll(i[2]);
             } else {
                 schedule[*day].iso = std::stoll(i[3]);
                 schedule[*day].nso = std::stoll(i[4]);
             }
         } else {
-            std::cout << "Failed to parse line: " << std::endl << "|";
-            for (const auto &cell : i) {
-                std::cout << cell << "|";
-            }
-            std::cout << "|" << std::endl;
+            std::cout << "Failed to parse line:\n|";
+            for (const auto &cell : i) std::cout << cell << "|";
+            std::cout << "\n";
             std::abort();
         }
     }
     Count total;
     for (const auto &[day, count] : schedule) {
-        if (!expires_) {
-            set_exp(day + 10_years);
-        }
+        if (!expires_) set_exp(day + 10_years);
         total += count;
         vested_[day] = total;
     }

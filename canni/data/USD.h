@@ -33,8 +33,8 @@ public:
     USD &operator+=(const USD &rhs) { cents_ += rhs.cents_; return *this; }
     USD &operator-=(const USD &rhs) { cents_ -= rhs.cents_; return *this; }
 
-    auto operator<=>(const USD &) const = default;
-    bool operator==(const USD &) const = default;
+    __header_always_inline auto operator<=>(const USD &) const = default;
+    __header_always_inline bool operator==(const USD &) const = default;
 
     pure std::string to_string() const;
 
@@ -51,3 +51,12 @@ consteval USD operator""_USD(const unsigned long long n) { return USD::dollars(n
 consteval USD operator""_USD(const long double n) { return USD::floor(n); }
 
 } // namespace canni
+
+namespace std {
+
+template <>
+pure inline const canni::USD &min(const canni::USD &a, const canni::USD &b) { return a < b ? a : b; }
+template <>
+pure inline const canni::USD &max(const canni::USD &a, const canni::USD &b) { return a > b ? a : b; }
+
+} // namespace std

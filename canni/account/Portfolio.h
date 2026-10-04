@@ -23,6 +23,8 @@ abstract struct Portfolio {
     struct History {
         std::vector<Day> dates;
         std::vector<std::vector<Entry>> rows;
+        std::vector<std::shared_ptr<AccountSnapshot>> account_snapshots;
+        Taxes taxes;
     };
 
     struct Params {
@@ -46,10 +48,15 @@ abstract struct Portfolio {
     virtual ~Portfolio() = default;
 
     /// Captures current date/balance history for later restoration via load_history().
-    pure History snapshot() const { return {dates_, rows_}; }
+    pure History snapshot() const {
+        History h{dates_, rows_, {}, taxes};
+        for (const auto &a : accounts_)
+            h.account_snapshots.push_back(a->save());
+        return h;
+    }
 
     /// Replaces date/balance history with a previously captured snapshot.
-    void load_history(const History &h) { dates_ = h.dates; rows_ = h.rows; }
+    void load_history(const History &h) { dates_ = h.dates; rows_ = h.rows; taxes = h.taxes; }
 
     struct ColumnType {
         enum Type { kIgnore, kBalance, kPrincipal };
