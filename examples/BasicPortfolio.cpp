@@ -49,8 +49,13 @@ struct MyFinances : Portfolio {
         home.set_apy(p.avg_real_estate);
 
         if (!p.base.history) {
-            // Load historical balances from CSV if available.
-            // import_csv("../data/tracking.csv", { Balance(checking), Balance(savings), ... });
+            seed(p.base.today);
+            // Sample starting balances — replace with your own or load from CSV.
+            (void)checking.deposit(15000_USD);
+            (void)savings.deposit(25000_USD);
+            (void)stocks.deposit(40000_USD);
+            (void)f401k.deposit(80000_USD);
+            (void)roth.deposit(30000_USD);
         }
 
         add<Yearly>("Taxes", Day("04/01/2027"), [&](Day d) {

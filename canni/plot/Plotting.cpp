@@ -26,15 +26,15 @@ FILE *setup_plot(const XYPlotOptions &options, const bool has_y2, const bool sta
         std::cerr << "Failed to open gnuplot pipe" << std::endl;
         return nullptr;
     }
-    fprintf(plot, "set title '%s'\n", options.title.c_str());
-    fprintf(plot, "set xlabel '%s'\n", options.x_title.c_str());
-    fprintf(plot, "set ylabel '%s'\n", options.y_title.c_str());
+    fprintf(plot, "set title \"%s\"\n", options.title.c_str());
+    fprintf(plot, "set xlabel \"%s\"\n", options.x_title.c_str());
+    fprintf(plot, "set ylabel \"%s\"\n", options.y_title.c_str());
     fprintf(plot, "set grid\n");
     fprintf(plot, "set term qt font \"Arial\"\n");
     fprintf(plot, "set timefmt '%%Y-%%m-%%d'\n");
     fprintf(plot, "set ytics nomirror\n");
     if (has_y2) {
-        fprintf(plot, "set y2label '%s'\n", options.y2_title.c_str());
+        fprintf(plot, "set y2label \"%s\"\n", options.y2_title.c_str());
         fprintf(plot, "set y2tics\n");
     }
     if (stacked) {

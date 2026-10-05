@@ -45,17 +45,22 @@ struct MyFinances : Portfolio {
             // Load vesting schedules from Carta-format CSVs.
             // Columns (NSO/ISO): row, date, new_vested, cumulative, exercised
             // Columns (Mix):     row, date, new_vested, iso_vested, nso_vested, cumulative, exercised
-            grant_a.load("../data/grant-a.csv"); // NSO grant, earliest
-            grant_b.load("../data/grant-b.csv"); // NSO grant
-            grant_c.load("../data/grant-c.csv"); // Mix grant
+            grant_a.load("../examples/data/grant-a.csv"); // NSO grant, earliest
+            grant_b.load("../examples/data/grant-b.csv"); // NSO grant
+            grant_c.load("../examples/data/grant-c.csv"); // Mix grant
 
             // Record any historical sales already made (prevents double-counting on restore).
             grant_a
                 .with_sale(Day("06/15/2022"), 18.00_USD, {.nso = 10000})
                 .with_sale(Day("12/01/2023"), 22.50_USD, {.nso = 5000});
 
-            // Load historical account balances if available.
-            // import_csv("../data/tracking.csv", { Balance(checking), ... });
+            seed(p.base.today);
+            // Sample starting balances — replace with your own or load from CSV.
+            (void)checking.deposit(50000_USD);
+            (void)savings.deposit(30000_USD);
+            (void)stocks.deposit(100000_USD);
+            (void)f401k.deposit(120000_USD);
+            (void)roth.deposit(40000_USD);
         }
 
         add<Yearly>("Taxes", Day("04/01/2027"), [&](Day d) {
