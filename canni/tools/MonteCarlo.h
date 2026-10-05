@@ -1,5 +1,7 @@
 #pragma once
 
+#include <random>
+#include <thread>
 #include <vector>
 
 #include "canni/account/MarketReturns.h"
@@ -35,9 +37,10 @@ monte_carlo_comparison(typename P::Params params, const std::vector<Scenario> &s
     const I64 end_year  = params.base.ending.year();
     const I64 years     = end_year - base_year + 1;
 
-    std::mt19937 rng(std::random_device{}());
     params.base.verbose = false;
     params.base.history = P(params, {}).snapshot();
+
+    const I64 n_threads = std::max(I64{1}, static_cast<I64>(std::thread::hardware_concurrency()));
 
     std::vector<Series<I64, double>> results;
     for (const auto &scenario : scenarios) {
@@ -45,18 +48,26 @@ monte_carlo_comparison(typename P::Params params, const std::vector<Scenario> &s
         result.name = scenario.name;
         for (I64 y = base_year; y <= end_year; ++y) result.points.emplace_back(y, 0);
 
-        for (I64 i = 0; i < n_sims; ++i) {
-            params.base.returns = MarketReturns(base_year, years, returns, rng);
-            const Day retire = min_retirement_date<P>(params, scenario);
-            std::cout << "#" << i << ": " << retire << " {"
-                << "stocks: " << params.base.returns->cumulative(Account::kStocks, end_year) << ", "
-                << "bonds: " << params.base.returns->cumulative(Account::kBonds, end_year) << ", "
-                << "cash: " << params.base.returns->cumulative(Account::kCash, end_year) << ", "
-                << "inflation: " << params.base.returns->cumulative(Account::kInflation, end_year)
-                << "}\n";
-            for (I64 y = retire.year(); y <= end_year; ++y)
-                result.points[y - base_year].second += 1;
+        std::vector<I64> retire_years(n_sims);
+        {
+            std::vector<std::thread> threads;
+            threads.reserve(n_threads);
+            for (I64 t = 0; t < n_threads; ++t) {
+                threads.emplace_back([&, t]() {
+                    std::mt19937 rng(std::random_device{}());
+                    for (I64 i = t; i < n_sims; i += n_threads) {
+                        auto sim_params = params;
+                        sim_params.base.returns = MarketReturns(base_year, years, returns, rng);
+                        retire_years[i] = min_retirement_date<P>(sim_params, scenario).year();
+                    }
+                });
+            }
+            for (auto &th : threads) th.join();
         }
+
+        for (const I64 retire_year : retire_years)
+            for (I64 y = retire_year; y <= end_year; ++y)
+                result.points[y - base_year].second += 1;
         for (auto &val : result.points | std::views::values) val /= static_cast<double>(n_sims);
         results.push_back(result);
     }

@@ -13,7 +13,9 @@ namespace canni {
 class USD {
 public:
     static constexpr USD dollars(const I64 dollars) { return USD(dollars * 100); }
-    static constexpr USD floor(const F64 dollars) { return USD(static_cast<I64>(dollars * 100)); }
+    static constexpr USD floor(const F64 dollars) {
+        return USD(static_cast<I64>(dollars >= 0 ? dollars * 100 + 0.5 : dollars * 100 - 0.5));
+    }
     static USD parse(const std::string &str);
 
     USD() = default;

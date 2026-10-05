@@ -51,14 +51,20 @@ target_link_libraries(finances_lib PUBLIC)
 target_include_directories(finances_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_options(finances_lib PRIVATE -O0 -Wall -Wextra -Wpedantic -Wshadow -Werror)
 
-add_executable(main
-        canni/Main.cpp
+function(add_example example_file)
+    get_filename_component(example_name "${example_file}" NAME_WE)
+    add_executable(${example_name}
+        ${example_file}
         canni/plot/Plotting.h
         canni/plot/Plotting.cpp
-)
-target_link_libraries(main PRIVATE finances_lib)
-target_include_directories(main PRIVATE canni)
-target_compile_options(main PRIVATE -O0 -Wall -Wextra -Wpedantic -Wshadow -Werror)
+    )
+    target_link_libraries(${example_name} PRIVATE finances_lib)
+    target_include_directories(${example_name} PRIVATE canni)
+    target_compile_options(${example_name} PRIVATE -O0 -Wall -Wextra -Wpedantic -Wshadow -Werror)
+endfunction()
+
+add_example(examples/BasicPortfolio.cpp)
+add_example(examples/OptionsPortfolio.cpp)
 
 # Tests
 include(GoogleTest)
@@ -82,7 +88,12 @@ function(add_finance_test test_file)
 endfunction()
 
 add_finance_test(test/TestAccount.cpp)
+add_finance_test(test/TestCompany.cpp)
 add_finance_test(test/TestDay.cpp)
+add_finance_test(test/TestEvent.cpp)
+add_finance_test(test/TestInflation.cpp)
 add_finance_test(test/TestInterest.cpp)
+add_finance_test(test/TestMarketReturns.cpp)
 add_finance_test(test/TestOptions.cpp)
+add_finance_test(test/TestTaxes.cpp)
 add_finance_test(test/TestUSD.cpp)

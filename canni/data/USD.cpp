@@ -6,11 +6,10 @@ namespace canni {
 
 USD USD::parse(const std::string &str) {
     std::string tmp = str;
-    const auto iter = std::remove(tmp.begin(), tmp.end(), '$');
+    const auto iter = std::ranges::remove(tmp, '$').begin();
     tmp.erase(iter, tmp.end());
-    const auto decimal = std::find(tmp.begin(), tmp.end(), '.');
-    if (decimal != tmp.end()) {
-        const auto neg = str[0] == '-';
+    if (const auto decimal = std::ranges::find(tmp, '.'); decimal != tmp.end()) {
+        const auto neg = !tmp.empty() && tmp[0] == '-';
         const auto str_dollars = std::string(tmp.begin(), decimal);
         const auto str_cents = std::string(decimal + 1, tmp.end());
         const I64 dollars = std::stoll(str_dollars);
