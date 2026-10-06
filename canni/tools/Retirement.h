@@ -35,11 +35,12 @@ keep Day min_retirement_date(typename P::Params params, const Scenario &scenario
         return portfolio.solvent();
     };
 
-    Day result = bisect(simulate, params.base.today, params.base.ending, 1_years);
-    result = bisect(simulate, result - 1_years, result + 1_years, 1_months);
+    const Day &start = params.base.today;
+    Day result = bisect(simulate, start, params.base.ending, 1_years);
+    result = bisect(simulate, std::max(start, result - 1_years), result + 1_years, 1_months);
     // TODO: Make granularity of bisects selectable
-    result = bisect(simulate, result - 2_months, result + 2_months, 1_days);
-    return result;
+    result = bisect(simulate, std::max(start, result - 2_months), result + 2_months, 1_days);
+    return std::max(start, result);
 }
 
 } // namespace canni
