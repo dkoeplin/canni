@@ -164,6 +164,7 @@ Portfolio &Portfolio::project_until(const Day last, const Day::Distance &step) {
     ASSERT(!dates_.empty(), "Accounts::project_until requires account history.");
     while (dates_.back() < last) {
         project_once(step);
+        if (!solvent()) break;
     }
     return *this;
 }
