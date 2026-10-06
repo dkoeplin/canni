@@ -84,4 +84,9 @@ void xy_plot(const std::vector<Series<X, Y>> &series, const XYPlotOptions &optio
     pclose(plot);
 }
 
+template <typename X, typename Y>
+void stacked_plot(const std::vector<Series<X, Y>> &series, const XYPlotOptions &options = {}) {
+    xy_plot<X, Y, true>(series, options);
+}
+
 } // namespace canni

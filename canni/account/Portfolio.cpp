@@ -96,19 +96,23 @@ Series<Day, USD> Portfolio::totals(const std::string &name, const bool normalize
 std::vector<Series<Day, USD>> Portfolio::grouped_totals(const bool normalize) const {
     std::vector<Series<Day, USD>> groups;
     for (U64 g = 0; g < Account::kNUM_ACCOUNT_TYPES; ++g) {
-        Series<Day, USD> series;
-        series.name = to_string(static_cast<Account::Kind>(g));
-        groups.push_back(series);
+        if (g != Account::kInflation) {
+            Series<Day, USD> series;
+            series.name = to_string(static_cast<Account::Kind>(g));
+            groups.push_back(series);
+        }
     }
     for (U64 i = 0; i < dates_.size(); ++i) {
         const auto &day = dates_.at(i);
         for (U64 g = 0; g < Account::kNUM_ACCOUNT_TYPES; ++g) {
-            USD group_total;
-            for (const auto &account : accounts_by_group_.at(g)) {
-                const auto balance = rows_.at(account->index()).at(i).balance;
-                group_total += normalize ? inflation.inverse(day, balance) : balance;
+            if (g != Account::kInflation) {
+                USD group_total;
+                for (const auto &account : accounts_by_group_.at(g)) {
+                    const auto balance = rows_.at(account->index()).at(i).balance;
+                    group_total += normalize ? inflation.inverse(day, balance) : balance;
+                }
+                groups[g].points.emplace_back(day, group_total);
             }
-            groups[g].points.emplace_back(day, group_total);
         }
     }
     return groups;

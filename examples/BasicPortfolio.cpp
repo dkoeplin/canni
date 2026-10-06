@@ -1,7 +1,8 @@
 /// BasicPortfolio.cpp — minimal example of canni: salary, expenses, retirement accounts,
 /// housing scenarios, and a comparison plot.
 ///
-/// Replace the placeholder values with your own numbers to use this as a starting point.
+/// Build your own Portfolio subclass using this as an example or replace the placeholder values with your
+/// own numbers to use this as a direct starting point.
 
 #include "account/Scenario.h"
 #include "canni/account/Portfolio.h"
@@ -31,12 +32,16 @@ struct MyFinances : Portfolio {
         Interest avg_real_estate   = 3.5_pct;
 
         // Annual amounts (in today's dollars)
-        USD salary              = 120000_USD;
-        USD partner_salary      = 80000_USD;
-        USD living_expenses     = 60000_USD;
+        // Example is a dual income household with both partners making $60K/year before taxes.
+        USD salary              = 60000_USD; // $80K/year
+        USD partner_salary      = 60000_USD; // $60K/year
+        USD living_expenses     = 60000_USD; // $60K/year
         USD health_insurance    = 18000_USD; // post-retirement only
-        I64 medical_age         = 65;
-        USD medical_per_year    = 2500_USD;
+        I64 medical_age         = 65;        // Starting age for increasing medical expenses
+        USD medical_per_year    = 2500_USD;  // Increase in medical expenses per year starting on [medical_age]
+
+        /// Taxes
+        double property_tax = 0.01; // 1% property tax rate
     };
 
     explicit MyFinances(const Params &p, const Scenario &scenario = {})
@@ -60,8 +65,6 @@ struct MyFinances : Portfolio {
 
         add<Yearly>("Taxes", Day("04/01/2027"), [&](Day d) {
             const auto summary = calculate_taxes(inflation, taxes, d.year() - 1);
-            if (params_.base.verbose)
-                std::cout << "[" << d.year() - 1 << "] Owed: " << summary.net_owed() << "\n";
             (void)withdraw("Taxes", summary.net_owed());
         });
 
@@ -100,8 +103,8 @@ struct MyFinances : Portfolio {
     }
 
     bool solvent() const override {
-        // Liquid assets only — exclude illiquid real estate from solvency check.
-        return total() - get<RealEstate>().balance() > 0_USD;
+        // Liquid assets only — exclude real estate and its offsetting mortgage liability.
+        return total() - get<RealEstate>().balance() - get<Mortgage>().balance() > 0_USD;
     }
 
     void deposit(const USD amount) const override { (void)checking.deposit(amount); }
@@ -131,19 +134,35 @@ struct MyFinances : Portfolio {
 
 using Mod = TargetedScenario<MyFinances>;
 
-// Buy a home outright for [price] on [when].
-Mod buy_home(Day when, USD price) {
-    return {"Buy Home", [when, price](MyFinances &s) {
-        s.add<Once>("Buy Home", when, [&s, price](Day d) {
-            const USD cost = s.params_.avg_real_estate.estimate(s.params_.base.today, d, price);
+// Buy a home with for [price] on [when] with [mortgage_params].
+Mod buy_home(Day when, USD price, Mortgage::Params mortgage_params) {
+    return {"Buy Home for " + price.to_string(), [when, price, mortgage_params](MyFinances &s) {
+        auto &mortgage = s.add<Mortgage>("Mortgage", mortgage_params);
+        s.add<Once>("Buy House", when, [&s, &mortgage, price, mortgage_params](Day d) {
+            const USD cost    = s.params_.avg_real_estate.estimate(s.params_.base.today, d, price);
+            const USD closing = cost * 0.03;
+            const USD down    = cost * mortgage_params.down_pct;
+            const USD loan    = cost - down;
             (void)s.home.deposit(cost);
-            (void)s.withdraw("Home purchase", cost * 1.03); // + 3% closing costs
+            (void)s.withdraw("Buy house (down + closing)", down + closing);
+            mortgage.originate(loan);
+        });
+        s.add<Monthly>("Mortgage Payment", when + 1_months, [&s, &mortgage](Day d) {
+            const USD owed = mortgage.owed();
+            return_if(owed <= 0_USD);
+            const USD interest       = owed * (mortgage.params().annual_rate / 12.0);
+            const USD payment        = std::min(mortgage.monthly_payment() + mortgage.params().extra_monthly, owed + interest);
+            const USD principal_paid = payment - interest;
+            s.taxes.mortgage(d, interest);
+            (void)s.withdraw("Mortgage Payment", payment);
+            (void)mortgage.deposit(principal_paid);
         });
         s.add<Monthly>("Home Expenses", when, [&s](Day d) {
-            const auto base = s.home.balance() * 0.8;
+            const auto base = s.home.balance() * 0.8; // Estimate an 80% assessed value
             return_if(base <= 0_USD);
-            (void)s.withdraw("Upkeep + tax", (base * 0.02) / 12);
-            s.taxes.property_tax(d, (base * 0.01) / 12);
+            (void)s.withdraw("Upkeep", (base * 0.01) / 12);
+            (void)s.withdraw("Property Tax", (base * s.params_.property_tax) / 12);
+            s.taxes.property_tax(d, (base * s.params_.property_tax) / 12);
         });
     }};
 }
@@ -157,20 +176,10 @@ Mod rent(USD monthly_rent) {
     }};
 }
 
-// Convert [pct] of 401(k) to Roth each year after retirement.
-Mod roth_conversion(double pct) {
-    return {"Roth Conversion", [pct](MyFinances &s) {
-        s.add<Yearly>("Roth Conversion", s.params_.base.retire + 1_years, [&s, pct](Day) {
-            const USD amount = s.f401k.withdraw(s.f401k.balance() * pct);
-            (void)s.roth.deposit(amount);
-        });
-    }};
-}
-
 } // namespace
 
 int main() {
-    const Day kBirth("01/15/1990");
+    const Day kBirth("01/01/1990");
     const Day kToday("01/01/2026");
 
     const MyFinances::Params kBase {
@@ -178,7 +187,7 @@ int main() {
             .avg_inflation_rate = 3.0_pct,
             .birth              = kBirth,
             .today              = kToday,
-            .retire             = kToday + 10_years,
+            .retire             = kToday + 25_years,
             .ending             = kBirth + 90_years,
             .verbose            = true,
         },
@@ -188,16 +197,24 @@ int main() {
         .health_insurance = 18000_USD,
     };
 
+    // 30 year 7% fixed rate mortgage with 20% down payment
+    constexpr Mortgage::Params mortgage {
+        .down_pct = 0.20,
+        .annual_rate = 0.07,
+        .duration_years = 30,
+    };
+
     // ── Single verbose run ──────────────────────────────────
-    MyFinances base(kBase, rent(3000_USD) | roth_conversion(0.10));
-    base.project();
+    MyFinances finances(kBase, rent(3000_USD));
+    finances.project();
+    stacked_plot(finances.grouped_totals());
 
     // ── Housing comparison ──────────────────────────────────
     compare<MyFinances>(kBase, {
         rent(3000_USD),
-        buy_home(kToday + 6_months, 600000_USD),
-        buy_home(kToday + 6_months, 800000_USD),
-        buy_home(kToday + 6_months, 1000000_USD),
+        buy_home(kToday + 12_months,  600000_USD, mortgage),
+        buy_home(kToday + 12_months,  800000_USD, mortgage),
+        buy_home(kToday + 12_months, 1000000_USD, mortgage),
     }, {
         .title   = "Rent vs. Buy Comparison",
         .y_title = "Projected Balance (Today's Dollars)"
@@ -206,9 +223,10 @@ int main() {
     // ── Monte Carlo ─────────────────────────────────────────
     constexpr I64 kNumSims = 500;
     const auto sims = monte_carlo_comparison<MyFinances>(kBase, {
+        buy_home(kToday + 6_months, 600000_USD, mortgage),
+        buy_home(kToday + 6_months, 800000_USD, mortgage),
+        buy_home(kToday + 6_months, 1000000_USD, mortgage),
         rent(3000_USD),
-        buy_home(kToday + 6_months, 600000_USD),
-        buy_home(kToday + 6_months, 800000_USD),
     }, kConservative, kNumSims);
     xy_plot<I64, double>(sims, {
         .title   = "Monte Carlo: Retirement Probability",

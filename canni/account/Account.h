@@ -169,7 +169,7 @@ struct Mortgage : Liability<Account::kMortgage> {
     struct Params {
         double down_pct = 0.20;     // Down payment as a fraction of purchase price
         double annual_rate = 0.07;  // Annual interest rate
-        I64 duration_years = 30;    // Loan term in years
+        I64 duration_years = 30;    // Loan term in yearsZ
         USD extra_monthly = 0_USD;  // Additional monthly principal payment above the required amount
     };
 
