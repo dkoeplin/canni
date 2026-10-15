@@ -66,7 +66,10 @@ endfunction()
 add_example(examples/BasicPortfolio.cpp)
 add_example(examples/OptionsPortfolio.cpp)
 
-add_example(data/Main.cpp)
+# Personal, untracked projection; only built when present locally.
+if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/data/Main.cpp)
+    add_example(data/Main.cpp)
+endif()
 
 # Tests
 include(GoogleTest)
