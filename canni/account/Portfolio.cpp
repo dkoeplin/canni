@@ -14,8 +14,8 @@
 
 namespace canni {
 
-Portfolio::Portfolio(const Params &params, const Scenario &scenario)
-    : inflation(this, params.today, params.avg_inflation_rate), params_(params) {
+Portfolio::Portfolio(const Params &params, Scenario scenario)
+    : inflation(this, params.today, params.avg_inflation_rate), params_(params), scenario_(std::move(scenario)) {
 
     if (params_.history) {
         load_history(*params_.history);
@@ -45,9 +45,6 @@ Portfolio::Portfolio(const Params &params, const Scenario &scenario)
             remainder -= actual;
         }
     });
-
-    // Apply modifier (adds housing events, sale events, donations, etc.) before the sweep.
-    if (scenario.apply) scenario.apply(*this);
 }
 
 const Portfolio::ColumnType Portfolio::Ignore = ColumnType(nullptr, ColumnType::kIgnore);
@@ -141,6 +138,7 @@ void Portfolio::seed(const Day &day) {
 }
 
 Portfolio &Portfolio::project_once(const Day::Distance step) {
+    late_setup();
     ASSERT(!dates_.empty(), "Accounts::project requires account history.");
     const Day prev_day = dates_.back();
     const Day next_day = prev_day + step;
@@ -168,9 +166,17 @@ Portfolio &Portfolio::project_until(const Day last, const Day::Distance &step) {
     ASSERT(!dates_.empty(), "Accounts::project_until requires account history.");
     while (dates_.back() < last) {
         project_once(step);
-        if (!solvent()) break;
+        if (liquid() <= 0_USD) break;
     }
     return *this;
+}
+
+void Portfolio::late_setup() {
+    return_if(setup_);
+    setup_ = true;
+
+    // Apply modifier (adds housing events, sale events, donations, etc.) before the sweep.
+    if (scenario_.apply) scenario_.apply(*this);
 }
 
 Account &Portfolio::add(const std::shared_ptr<Account> &account) {
@@ -251,6 +257,8 @@ std::vector<Series<I64, USD>> Portfolio::grouped_expenses() const {
     }
     return result;
 }
+
+USD Portfolio::liquid() const { return total() - get<RealEstate>().balance() - get<Options>().balance(); }
 
 pure USD Portfolio::withdraw(const std::string &name, USD amount) {
     const auto &today = current_day();

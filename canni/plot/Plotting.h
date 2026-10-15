@@ -16,8 +16,8 @@ struct XYPlotOptions {
     std::string y_title  = "Balance";
     std::string y2_title = "Y2";
     std::string x_format  = "TIME";       // gnuplot format string for x-axis
-    std::string y_format  = "$%.1s%c";    // gnuplot format string for left y-axis
-    std::string y2_format = "$%.1s%c";    // gnuplot format string for right y-axis
+    std::string y_format  = "$%.2s%c";    // gnuplot format string for left y-axis
+    std::string y2_format = "$%.2s%c";    // gnuplot format string for right y-axis
 };
 
 namespace detail {

@@ -49,11 +49,11 @@ void setup_numeric_axis(FILE* plot, const Axis axis) {
 
 void AxisFormat<Day>::setup_axis(FILE* plot, Axis axis) {
     fprintf(plot, "set %sdata time\n", axis_name(axis).c_str());
-    fprintf(plot, "set format %s '%%Y'\n", axis_name(axis).c_str());
+    fprintf(plot, "set format %s '%%Y-%%m'\n", axis_name(axis).c_str());
 }
 
 void AxisFormat<USD>::setup_axis(FILE* plot, Axis axis) {
-    fprintf(plot, "set format %s '$%%.1s%%c'\n", axis_name(axis).c_str());
+    fprintf(plot, "set format %s '$%%.2s%%c'\n", axis_name(axis).c_str());
 }
 
 } // namespace canni::detail

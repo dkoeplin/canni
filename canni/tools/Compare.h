@@ -16,7 +16,9 @@ void compare(typename P::Params params, const std::vector<Scenario> &mods, const
     for (const auto &mod : mods) {
         P s(params, mod);
         series.push_back(s.project_until(params.base.ending).totals(mod.name));
-        std::cout << "Min retirement year (" << mod.name << "): " << min_retirement_date<P>(params, mod) << "\n";
+        const auto min = min_retirement<P>(params, mod);
+        std::cout << "Min retirement year (" << mod.name << "): " << min.day
+                  << " (" << min.balance << ")\n";
     }
     xy_plot(series, opts);
 }

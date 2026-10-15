@@ -53,12 +53,12 @@ monte_carlo_comparison(typename P::Params params, const std::vector<Scenario> &s
             std::vector<std::thread> threads;
             threads.reserve(n_threads);
             for (I64 t = 0; t < n_threads; ++t) {
-                threads.emplace_back([&, t]() {
+                threads.emplace_back([&, t] {
                     std::mt19937 rng(std::random_device{}());
                     for (I64 i = t; i < n_sims; i += n_threads) {
                         auto sim_params = params;
                         sim_params.base.returns = MarketReturns(base_year, years, returns, rng);
-                        retire_years[i] = min_retirement_date<P>(sim_params, scenario).year();
+                        retire_years[i] = min_retirement<P>(sim_params, scenario).day.year();
                     }
                 });
             }

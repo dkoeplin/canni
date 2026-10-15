@@ -5,13 +5,18 @@
 
 namespace canni {
 
+struct DayAndBalance {
+    Day day;
+    USD balance;
+};
+
 template <typename Func>
-Day bisect(const Func simulate, Day lo, Day hi, const Day::Distance step) {
-    Day best = hi;
+DayAndBalance bisect(const Func simulate, Day lo, Day hi, const Day::Distance step) {
+    DayAndBalance best {.day = hi, .balance = 0_USD};
     while (lo <= hi) {
         const Day mid = lo + Day::days((hi - lo) / 2);
-        if (simulate(mid)) {
-            best = mid;
+        if (const auto b = simulate(mid); b > 0_USD) {
+            best = {mid, b};
             hi = mid - step;
         }
         else {
@@ -23,24 +28,24 @@ Day bisect(const Func simulate, Day lo, Day hi, const Day::Distance step) {
 
 template <typename P>
     requires PortfolioSubclass<P>
-keep Day min_retirement_date(typename P::Params params, const Scenario &scenario) {
+keep DayAndBalance min_retirement(typename P::Params params, const Scenario &scenario) {
     params.base.verbose = false;
     const auto history = P(params, {}).snapshot(); // pre-load history once
 
-    const auto simulate = [&](Day retire) -> bool {
+    const auto simulate = [&](Day retire) -> USD {
         params.base.retire = retire;
         params.base.history = history;
         P portfolio(params, scenario);
         portfolio.project();
-        return portfolio.solvent();
+        return portfolio.inflation.inverse(portfolio.ending_day(), portfolio.liquid());
     };
 
     const Day &start = params.base.today;
-    Day result = bisect(simulate, start, params.base.ending, 1_years);
-    result = bisect(simulate, std::max(start, result - 1_years), result + 1_years, 1_months);
-    // TODO: Make granularity of bisects selectable
-    result = bisect(simulate, std::max(start, result - 2_months), result + 2_months, 1_days);
-    return std::max(start, result);
+    DayAndBalance result = bisect(simulate, start, params.base.ending, 1_years);
+    result = bisect(simulate, std::max(start, result.day - 1_years), result.day + 1_years, 1_months);
+    result = bisect(simulate, std::max(start, result.day - 2_months), result.day + 2_months, 1_days);
+    result.day = std::max(start, result.day);
+    return result;
 }
 
 } // namespace canni

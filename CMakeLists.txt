@@ -66,6 +66,8 @@ endfunction()
 add_example(examples/BasicPortfolio.cpp)
 add_example(examples/OptionsPortfolio.cpp)
 
+add_example(data/Main.cpp)
+
 # Tests
 include(GoogleTest)
 enable_testing()

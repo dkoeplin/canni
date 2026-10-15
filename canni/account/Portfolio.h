@@ -5,6 +5,7 @@
 #include <string_view>
 #include <vector>
 
+#include "Scenario.h"
 #include "canni/account/Account.h"
 #include "canni/account/MarketReturns.h"
 #include "canni/account/Taxes.h"
@@ -43,7 +44,7 @@ abstract struct Portfolio {
         bool verbose = false;
     };
 
-    explicit Portfolio(const Params &params, const Scenario &scenario);
+    explicit Portfolio(const Params &params, Scenario scenario);
 
     virtual ~Portfolio() = default;
 
@@ -155,12 +156,15 @@ abstract struct Portfolio {
     /// In a given simulated cycle, determines how to move balances between accounts after all other events.
     virtual void invest() const = 0;
 
-    virtual bool solvent() const = 0;
+    // TODO: Is this the right term for this? (Total balance minus real estate and options).
+    virtual USD liquid() const;
 
     Taxes taxes;
     Inflation inflation;
 
   protected:
+    void late_setup();
+
     Account &add(const std::shared_ptr<Account> &account);
     Event &add(const std::shared_ptr<Event> &event);
 
@@ -180,7 +184,9 @@ abstract struct Portfolio {
         return false;
     }
 
+    bool setup_ = false;
     Params params_;
+    Scenario scenario_;
 
     std::vector<std::shared_ptr<Account>> accounts_;
     std::vector<std::vector<Account *>> accounts_by_group_;
