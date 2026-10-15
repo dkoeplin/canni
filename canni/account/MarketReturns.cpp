@@ -39,7 +39,7 @@ pure double MarketReturns::at(const Account::Kind type, I64 year) const {
 pure double MarketReturns::cumulative(const Account::Kind type, I64 year) const {
     const auto &sequence = cumulative_.at(type);
     const I64 idx = year - base_year_;
-    return (idx >= 0 && idx < static_cast<I64>(sequence.size())) ? sequence[idx] : 0.0;
+    return (idx >= 0 && idx < static_cast<I64>(sequence.size())) ? sequence[idx] : 1.0;
 }
 
 } // namespace canni

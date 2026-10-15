@@ -78,16 +78,19 @@ struct MyFinances : Portfolio {
                 const auto mc    = income * 0.0235;
                 const auto with  = income * 0.22;
                 (void)f401k.deposit(contribution);
-                taxes.income(d, income);  taxes.social_security(d, ss);
-                taxes.withholding(d, with); taxes.medicare(d, mc);
+                taxes.wages(d, income);
+                taxes.social_security(d, ss);
+                taxes.withholding(d, with);
+                taxes.medicare(d, mc);
                 deposit(income - with - mc - ss);
 
                 // Partner's salary
                 const auto partner = inflation.yearly(d, params_.partner_salary) / 12;
                 const auto pmc  = partner * 0.0235;
                 const auto pwth = partner * 0.15;
-                taxes.income(d, partner);
-                taxes.withholding(d, pwth); taxes.medicare(d, pmc);
+                taxes.wages(d, partner);
+                taxes.withholding(d, pwth);
+                taxes.medicare(d, pmc);
                 deposit(partner - pwth - pmc);
             }
 
@@ -102,9 +105,9 @@ struct MyFinances : Portfolio {
         });
     }
 
-    bool solvent() const override {
+    USD liquid() const override {
         // Liquid assets only — exclude real estate and its offsetting mortgage liability.
-        return total() - get<RealEstate>().balance() - get<Mortgage>().balance() > 0_USD;
+        return total() - get<RealEstate>().balance() - get<Mortgage>().balance();
     }
 
     void deposit(const USD amount) const override { (void)checking.deposit(amount); }

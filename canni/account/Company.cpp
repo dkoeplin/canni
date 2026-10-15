@@ -1,6 +1,7 @@
 #include "Company.h"
 
 #include <map>
+#include <optional>
 #include <utility>
 
 #include "canni/account/Options.h"
@@ -13,6 +14,7 @@ struct Company::Impl {
     std::vector<Options *> options_;
     std::map<Day, USD> fmv_; // date -> known FMV per share
     std::map<Day, USD> val_;
+    std::optional<std::pair<Day, Day>> lockup_; // [start, end)
 };
 
 Company::Company(const std::string &name)
@@ -24,6 +26,15 @@ Company &Company::valuation(const Day &day, const USD &fmv, const USD &ext) {
     impl_->fmv_[day] = fmv;
     impl_->val_[day] = ext;
     return *this;
+}
+
+Company &Company::lockup(const Day &start, const Day &end) {
+    impl_->lockup_ = {start, end};
+    return *this;
+}
+
+bool Company::locked(const Day &day) const {
+    return impl_->lockup_ && day >= impl_->lockup_->first && day < impl_->lockup_->second;
 }
 
 USD Company::fmv_at(const Day &day) const {

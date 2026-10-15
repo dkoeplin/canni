@@ -78,19 +78,16 @@ struct MyFinances : Portfolio {
                 const auto mc   = income * 0.0235;
                 const auto with = income * 0.22;
                 (void)f401k.deposit(contribution);
-                taxes.income(d, income);  taxes.social_security(d, ss);
-                taxes.withholding(d, with); taxes.medicare(d, mc);
+                taxes.wages(d, income);
+                taxes.social_security(d, ss);
+                taxes.withholding(d, with);
+                taxes.medicare(d, mc);
                 deposit(income - with - mc - ss);
             }
             (void)withdraw("Living expenses", inflation(d, params_.living_expenses / 12));
             if (d >= params_.base.retire)
                 (void)withdraw("Health insurance", inflation(d, params_.health_insurance / 12));
         });
-    }
-
-    bool solvent() const override {
-        // Options are illiquid until sold — exclude from solvency check.
-        return total() - get<Options>().balance() > 0_USD;
     }
 
     void deposit(const USD amount) const override { (void)checking.deposit(amount); }
@@ -118,9 +115,9 @@ struct MyFinances : Portfolio {
         .valuation(Day("01/01/2026"), 35.00_USD, 42.00_USD)  // Series E
     ;
 
-    Options &grant_a = add<Options>(AcmeCorp, "Grant-A", Options::kNSO, 5.00_USD);
-    Options &grant_b = add<Options>(AcmeCorp, "Grant-B", Options::kNSO, 12.00_USD);
-    Options &grant_c = add<Options>(AcmeCorp, "Grant-C", Options::kMix, 18.00_USD);
+    Options &grant_a = add<Options>(Day("01/01/2019"), AcmeCorp, "Grant-A", Options::kNSO, 5.00_USD);
+    Options &grant_b = add<Options>(Day("01/01/2021"), AcmeCorp, "Grant-B", Options::kNSO, 12.00_USD);
+    Options &grant_c = add<Options>(Day("01/01/2023"), AcmeCorp, "Grant-C", Options::kMix, 18.00_USD);
 
     const Params params_;
 };

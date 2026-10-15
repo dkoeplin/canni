@@ -11,8 +11,8 @@
 
 namespace canni {
 
-Options::Options(Portfolio *parent, Company company, const std::string &name, const Type type, USD strike)
-    : Account(parent, name), company_(std::move(company)), type_(type), strike_(std::move(strike)) {
+Options::Options(Portfolio *parent, const Day &grant_date, Company company, const std::string &name, const Type type, USD strike)
+    : Account(parent, name), company_(std::move(company)), type_(type), strike_(std::move(strike)), expires_(grant_date + 10_years) {
     company_.add_options(this);
 }
 
@@ -83,7 +83,7 @@ Options::Sale Options::sell(const Day day, const USD &price, Count count, bool c
 
     Taxes &taxes = parent_->taxes;
     // Spread (FMV - Strike) is taxed as standard income.
-    taxes.income(day, spread);
+    taxes.wages(day, spread);
     // Gain (Sale - FMV) is taxed as short term capital gains.
     taxes.short_term(day, gain);
 
@@ -120,5 +120,7 @@ Options::Count Options::sold(const Day &day) const {
     const auto iter = std::prev(it);
     return iter->second;
 }
+
+void Options::set_exp(const Day &day) { expires_ = expires_ ? std::min(*expires_, day) : day; }
 
 } // namespace canni

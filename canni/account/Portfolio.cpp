@@ -40,9 +40,11 @@ Portfolio::Portfolio(const Params &params, Scenario scenario)
         USD remainder = required - withdrawn;          // Remaining required withdrawals
         for (auto &account : accounts) {
             return_if(remainder <= 0_USD);
-            const USD actual = account.withdraw(remainder);
-            deposit(actual);
-            remainder -= actual;
+            if (account.type() == Retirement::kPreTax) {
+                const USD actual = account.withdraw(remainder);
+                deposit(actual);
+                remainder -= actual;
+            }
         }
     });
 }
@@ -151,10 +153,18 @@ Portfolio &Portfolio::project_once(const Day::Distance step) {
     }
     dates_.push_back(next_day);
 
+    // Charge any expenses associated with loans
+    for (const auto &loan : get<Loan>()) {
+        const auto charge = (loan.owed() * loan.apy_) / 12;
+        withdraw(loan.name(), charge);
+    }
+
     // Fire events after all account balances are updated
     for (const auto &event : events_) {
         event->evaluate(next_day);
     }
+
+    repay_loans();
 
     // Move balances, e.g. from cash to investments
     invest();
@@ -166,7 +176,7 @@ Portfolio &Portfolio::project_until(const Day last, const Day::Distance &step) {
     ASSERT(!dates_.empty(), "Accounts::project_until requires account history.");
     while (dates_.back() < last) {
         project_once(step);
-        if (liquid() <= 0_USD) break;
+        if (net_worth() < 0_USD) break;
     }
     return *this;
 }
@@ -210,6 +220,10 @@ Event &Portfolio::add(const std::shared_ptr<Event> &event) {
 }
 
 void Portfolio::sell_vested_options(const Company &company, const Day &day, const I64 n, const USD price) {
+    if (company.locked(day)) {
+        note("Skipped sale of " + company.name() + " options during lockup");
+        return;
+    }
     if (params_.verbose) {
         std::cout << "-----------------------------------------------\n"
                   << "[" << day << "] Selling " << n << " vested options at " << price << ":\n";
@@ -217,9 +231,9 @@ void Portfolio::sell_vested_options(const Company &company, const Day &day, cons
     Options::Sale sale;
     I64 remain = n;
     auto options_list = company.options();
-    auto iter = options_list.begin();
-    while (remain > 0 && iter != options_list.end()) {
-        Options *options = *iter;
+    for (Options *options : options_list) {
+        if (remain <= 0) break;
+        if (options->strike() >= price) continue; // Don't sell options that are underwater
         const Options::Count total = options->vested(day) - options->sold(day);
         Options::Count count;
         count.nso = std::min(remain, total.nso);
@@ -227,7 +241,6 @@ void Portfolio::sell_vested_options(const Company &company, const Day &day, cons
         count.iso = std::min(remain, total.iso);
         remain -= count.iso;
         const auto inst = options->sell(day, price, count, true);
-        ++iter;
         if (params_.verbose)
             std::cout << "  " << options->name() << ":" << count
                       << "\n    Exercise: " << inst.costs
@@ -237,7 +250,7 @@ void Portfolio::sell_vested_options(const Company &company, const Day &day, cons
     if (params_.verbose)
         std::cout << "Total:\n  Exercise: " << sale.costs << "\n  Proceeds: " << sale.proceeds
                   << "\n-----------------------------------------------\n";
-    (void)withdraw("Options exercise on " + day.to_string(), sale.costs);
+    withdraw("Options exercise on " + day.to_string(), sale.costs);
     deposit(sale.proceeds);
 }
 
@@ -258,21 +271,40 @@ std::vector<Series<I64, USD>> Portfolio::grouped_expenses() const {
     return result;
 }
 
-USD Portfolio::liquid() const { return total() - get<RealEstate>().balance() - get<Options>().balance(); }
+USD Portfolio::liquid() const {
+    return total() - get<RealEstate>().balance() - get<Options>().balance() - get<Mortgage>().balance();
+}
 
-pure USD Portfolio::withdraw(const std::string &name, USD amount) {
-    const auto &today = current_day();
+USD Portfolio::net_worth() const { return total() - get<Options>().balance(); }
+
+void Portfolio::withdraw(const std::string &name, const USD amount) {
     if (params_.verbose) {
+        const auto &today = current_day();
         expenses_[today.year()] += amount;
         expenses_breakdown_[today.year()][name] += amount;
     }
-    const bool retirement_age = today > (params_.birth + 59_years + 6_months);
+    pay(amount);
+}
+
+void Portfolio::repay_loans() {
+    for (const auto &loan : get<Loan>()) {
+        const USD owed = loan.owed();
+        if (owed <= 0_USD) continue;
+        // Clear the loan, then pay it back; anything that can't be paid is re-borrowed by pay().
+        (void)loan.deposit(owed);
+        pay(owed);
+    }
+}
+
+void Portfolio::pay(USD amount) {
+    const bool retirement_age = current_day() > (params_.birth + 59_years + 6_months);
     USD withdrawn;
-    return_if(out<Cash>(withdrawn, amount), withdrawn);
-    if (retirement_age) return_if(out<Retirement>(withdrawn, amount), withdrawn);
-    return_if(out<Bonds>(withdrawn, amount), withdrawn);
-    return_if(out<Stocks>(withdrawn, amount), withdrawn);
-    return withdrawn;
+    return_if(out<Cash>(withdrawn, amount));
+    // Assumes you would never want to trigger the 10% penalty, but this can be changed in the override of loan
+    if (retirement_age) return_if(out<Retirement>(withdrawn, amount));
+    return_if(out<Bonds>(withdrawn, amount));
+    return_if(out<Stocks>(withdrawn, amount));
+    loan(amount); // out<T>() decrements [amount], so this is the remaining shortfall
 }
 
 void Portfolio::note(const std::string &event) {

@@ -32,6 +32,7 @@ abstract struct Account {
     enum Kind : U64 {
         kBonds,
         kCash,
+        kLoan,
         kMortgage,
         kRealEstate,
         kRetirement,
@@ -165,11 +166,21 @@ abstract struct Liability : Account {
     pure Entry project(const DatedEntry &prev, const Day &) const override { return {prev.principal, prev.balance}; }
 };
 
+struct Loan : Liability<Account::kLoan> {
+    explicit Loan(Portfolio *parent, std::string name, double apy) : Liability(parent, std::move(name)), apy_(apy) {}
+    /// Depositing into a loan decreases the amount owed.
+    pure USD deposit(const USD &amount) const override;
+    /// "Withdrawing" from a loan increases the amount owed.
+    pure USD withdraw(const USD &amount) const override;
+    pure USD owed() const { return -balance(); }
+    double apy_;
+};
+
 struct Mortgage : Liability<Account::kMortgage> {
     struct Params {
         double down_pct = 0.20;     // Down payment as a fraction of purchase price
         double annual_rate = 0.07;  // Annual interest rate
-        I64 duration_years = 30;    // Loan term in yearsZ
+        I64 duration_years = 30;    // Loan term in years
         USD extra_monthly = 0_USD;  // Additional monthly principal payment above the required amount
     };
 

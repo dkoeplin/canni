@@ -19,12 +19,13 @@ class Taxes {
         pure USD total() const { return standard + medicare + social_security; }
     };
     struct Income {
-        USD standard;          // Standard income for the year
+        USD wages;             // Wages for the year
+        USD standard;          // Other standard income for the year
         USD dividends;         // Qualified dividends
         USD short_term_gains;  // Short term capital gains
         USD long_term_gains;   // Long term capital gains
 
-        pure USD total() const { return standard + dividends + short_term_gains + long_term_gains; }
+        pure USD total() const { return wages + standard + dividends + short_term_gains + long_term_gains; }
     };
     struct Deductions {
         USD donations;         // Donations made this year.
@@ -60,6 +61,7 @@ class Taxes {
     void social_security(const Day &day, const USD &amount) { entry_for(day.year()).paid.social_security += amount; }
 
     /// Mark various types of income during the year.
+    void wages(const Day &day, const USD &amount) { entry_for(day.year()).income.wages += amount; }
     void income(const Day &day, const USD &amount) { entry_for(day.year()).income.standard += amount; }
     void dividends(const Day &day, const USD &amount) { entry_for(day.year()).income.dividends += amount; }
     void short_term(const Day &day, const USD &amount) { entry_for(day.year()).income.short_term_gains += amount; }
@@ -103,7 +105,8 @@ CalculatedTaxes calculate_taxes(const Inflation &inflation, const Taxes &taxes, 
 inline std::ostream &operator<<(std::ostream &os, const CalculatedTaxes &taxes) {
     os << "=============== " << taxes.year << " Tax Summary ===============" << std::endl;
     os << "=== Income ===" << std::endl
-       << "            Standard:  " << taxes.entry.income.standard << std::endl;
+       << "                Wages: " << taxes.entry.income.wages << std::endl
+       << "             Standard: " << taxes.entry.income.standard << std::endl;
     os << "            Dividends: " << taxes.entry.income.dividends << std::endl
        << "Capital Gains (short): " << taxes.entry.income.short_term_gains << std::endl
        << " Capital Gains (long): " << taxes.entry.income.long_term_gains << std::endl;

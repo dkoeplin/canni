@@ -31,6 +31,7 @@ abstract struct Portfolio {
     struct Params {
         /// Market assumptions
         Interest avg_inflation_rate;
+        double loan_apy = 0.10; // 10%
 
         /// Important dates
         Day birth;  // Birth date of user
@@ -147,7 +148,7 @@ abstract struct Portfolio {
 
     virtual void deposit(USD amount) const = 0;
 
-    pure USD withdraw(const std::string &name, USD amount);
+    void withdraw(const std::string &name, USD amount);
 
     void note(const std::string &event);
 
@@ -156,14 +157,28 @@ abstract struct Portfolio {
     /// In a given simulated cycle, determines how to move balances between accounts after all other events.
     virtual void invest() const = 0;
 
-    // TODO: Is this the right term for this? (Total balance minus real estate and options).
+    /// Adds a liability for [amount] when attempting to withdraw more than available.
+    virtual void loan(const USD &amount) const { (void)liabilities.withdraw(amount); }
+
+    /// Returns the value of liquid accounts net of non-mortgage debt.
+    /// Excludes real estate, its mortgage, and unexercised options.
     virtual USD liquid() const;
+
+    /// Returns liquid value plus home equity, net of all debts. Excludes unexercised options.
+    /// A projection is solvent while this is non-negative: home equity can back a loan to bridge liquidity gaps.
+    virtual USD net_worth() const;
 
     Taxes taxes;
     Inflation inflation;
 
   protected:
     void late_setup();
+
+    /// Pays [amount] from available accounts, in order of preference, borrowing any shortfall via loan().
+    void pay(USD amount);
+
+    /// Pays down outstanding loans from available accounts.
+    void repay_loans();
 
     Account &add(const std::shared_ptr<Account> &account);
     Event &add(const std::shared_ptr<Event> &event);
@@ -198,6 +213,10 @@ abstract struct Portfolio {
     mutable std::unordered_map<I64, USD> expenses_;
     mutable std::unordered_map<I64, std::map<std::string, USD>> expenses_breakdown_;
     std::unordered_map<I64, std::vector<std::string>> notes_; // Recorded events per year
+
+  public:
+    // Must be declared after all other members: add() writes to params_, accounts_, rows_, etc.
+    Loan &liabilities = add<Loan>("Liabilities", params_.loan_apy);
 };
 
 template <typename P>

@@ -13,6 +13,7 @@ namespace canni {
 /// Example market performance distributions.
 
 inline const std::vector<MarketReturns::AssetClass> kConservative {
+    {.type = Account::kRetirement, .mean = 0.07,  .sigma = 0.15},
     {.type = Account::kStocks,     .mean = 0.07,  .sigma = 0.15},
     {.type = Account::kBonds,      .mean = 0.045, .sigma = 0.06},
     {.type = Account::kCash,       .mean = 0.035, .sigma = 0.01},
@@ -20,6 +21,7 @@ inline const std::vector<MarketReturns::AssetClass> kConservative {
     {.type = Account::kInflation,  .mean = 0.035, .sigma = 0.015}};
 
 inline const std::vector<MarketReturns::AssetClass> kOptimistic {
+    {.type = Account::kRetirement, .mean = 0.09,  .sigma = 0.20},
     {.type = Account::kStocks,     .mean = 0.09,  .sigma = 0.20},
     {.type = Account::kBonds,      .mean = 0.045, .sigma = 0.06},
     {.type = Account::kCash,       .mean = 0.035, .sigma = 0.01},

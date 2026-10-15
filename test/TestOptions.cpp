@@ -25,7 +25,6 @@ struct TestPortfolio : Portfolio {
         : Portfolio(p, Scenario{}) {}
     void deposit(USD amount) const override { (void)cash.deposit(amount); }
     void invest() const override {}
-    bool solvent() const override { return true; }
     Cash &cash = add<Cash>("Cash", 0.0_pct);
 };
 
@@ -45,7 +44,7 @@ const Company kTestCo = Company("TestCo").valuation(Day("01/01/2020"), 10.00_USD
 
 TEST(Options, LoadPopulatesVested) {
     TestPortfolio p;
-    auto &opts = p.add<Options>(kTestCo, "Test", Options::kNSO, 5.00_USD);
+    auto &opts = p.add<Options>(Day("01/01/2023"), kTestCo, "Test", Options::kNSO, 5.00_USD);
     write_nso_csv("/tmp/test_opts_load.tsv",
         "1\tJan 01 2024\t100\t100\t0\n"
         "2\tApr 01 2024\t100\t200\t0\n");
@@ -58,7 +57,7 @@ TEST(Options, LoadPopulatesVested) {
 
 TEST(Options, LoadEmptyGrantHasNoVested) {
     TestPortfolio p;
-    auto &opts = p.add<Options>(kTestCo, "Test", Options::kNSO, 5.00_USD);
+    auto &opts = p.add<Options>(Day("01/01/2023"), kTestCo, "Test", Options::kNSO, 5.00_USD);
     EXPECT_EQ(opts.vested(Day("01/01/2025")).nso, 0);
 }
 
@@ -68,7 +67,7 @@ TEST(Options, LoadEmptyGrantHasNoVested) {
 
 TEST(Options, WithSaleUpdatesSold) {
     TestPortfolio p;
-    auto &opts = p.add<Options>(kTestCo, "Test", Options::kNSO, 5.00_USD);
+    auto &opts = p.add<Options>(Day("01/01/2023"), kTestCo, "Test", Options::kNSO, 5.00_USD);
     write_nso_csv("/tmp/test_opts_sale.tsv", "1\tJan 01 2024\t100\t100\t0\n");
     opts.load("/tmp/test_opts_sale.tsv");
     p.seed(Day("01/01/2024"));
@@ -81,7 +80,7 @@ TEST(Options, WithSaleUpdatesSold) {
 
 TEST(Options, WithSaleClampsToVested) {
     TestPortfolio p;
-    auto &opts = p.add<Options>(kTestCo, "Test", Options::kNSO, 5.00_USD);
+    auto &opts = p.add<Options>(Day("01/01/2023"), kTestCo, "Test", Options::kNSO, 5.00_USD);
     write_nso_csv("/tmp/test_opts_clamp.tsv", "1\tJan 01 2024\t50\t50\t0\n");
     opts.load("/tmp/test_opts_clamp.tsv");
     p.seed(Day("01/01/2024"));
@@ -97,7 +96,7 @@ TEST(Options, WithSaleClampsToVested) {
 
 TEST(Options, SnapshotRestoresVestedAndSold) {
     TestPortfolio p1;
-    auto &opts = p1.add<Options>(kTestCo, "Test", Options::kNSO, 5.00_USD);
+    auto &opts = p1.add<Options>(Day("01/01/2023"), kTestCo, "Test", Options::kNSO, 5.00_USD);
     write_nso_csv("/tmp/test_opts_snap.tsv",
         "1\tJan 01 2024\t200\t200\t0\n");
     opts.load("/tmp/test_opts_snap.tsv");
@@ -111,7 +110,7 @@ TEST(Options, SnapshotRestoresVestedAndSold) {
     auto p2_params = test_params();
     p2_params.history = snap;
     TestPortfolio p2(p2_params);
-    auto &opts2 = p2.add<Options>(kTestCo, "Test", Options::kNSO, 5.00_USD);
+    auto &opts2 = p2.add<Options>(Day("01/01/2023"), kTestCo, "Test", Options::kNSO, 5.00_USD);
 
     EXPECT_EQ(opts2.avail(Day("06/01/2024")), avail_before);
     EXPECT_EQ(opts2.vested(Day("01/01/2024")).nso, 200);
@@ -120,14 +119,14 @@ TEST(Options, SnapshotRestoresVestedAndSold) {
 
 TEST(Options, SnapshotWithoutLoadHasNoVested) {
     TestPortfolio p1;
-    p1.add<Options>(kTestCo, "Test", Options::kNSO, 5.00_USD);
+    p1.add<Options>(Day("01/01/2023"), kTestCo, "Test", Options::kNSO, 5.00_USD);
     // No load(), no with_sale — snapshot should have empty vested/sold.
     const auto snap = p1.snapshot();
 
     auto p2_params = test_params();
     p2_params.history = snap;
     TestPortfolio p2(p2_params);
-    auto &opts2 = p2.add<Options>(kTestCo, "Test", Options::kNSO, 5.00_USD);
+    auto &opts2 = p2.add<Options>(Day("01/01/2023"), kTestCo, "Test", Options::kNSO, 5.00_USD);
 
     EXPECT_EQ(opts2.vested(Day("01/01/2025")).nso, 0);
     EXPECT_EQ(opts2.sold(Day("01/01/2025")).nso, 0);

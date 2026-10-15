@@ -27,6 +27,12 @@ class Company {
     /// Returns the estimated market price per share on or before [day], or USD(0) if none is set.
     pure USD market(const Day &day) const;
 
+    /// Prevents sales of shares from [start] until [end] (exclusive), e.g. a post-IPO lockup.
+    Company &lockup(const Day &start, const Day &end);
+
+    /// Returns true if shares cannot be sold on [day] due to a lockup.
+    pure bool locked(const Day &day) const;
+
     pure const std::vector<Options *> &options() const;
 
     void add_options(Options *) const;

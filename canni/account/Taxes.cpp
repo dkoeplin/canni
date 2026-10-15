@@ -72,7 +72,7 @@ USD niit_tax(const Inflation &, const Day &, const Taxes::Entry &entry) {
     // NOT historically an inflation adjusted threshold
     static const auto kNIITThreshold = 250000_USD;
 
-    const USD magi = entry.income.standard + entry.income.short_term_gains
+    const USD magi = entry.income.wages + entry.income.standard + entry.income.short_term_gains
                    + entry.income.dividends + entry.income.long_term_gains;
 
     return_if(magi <= kNIITThreshold, 0.00_USD);
@@ -86,7 +86,7 @@ USD medicare(const Inflation &, const Day &, const Taxes::Entry &entry) {
     // NOT historically an inflation adjusted threshold
     static const auto kMedicareAdditionalThreshold = 250000_USD;
 
-    const USD wages = entry.income.standard;
+    const USD wages = entry.income.wages;
     USD tax = wages * 0.0145;
     if (wages > kMedicareAdditionalThreshold) {
         tax += (wages - kMedicareAdditionalThreshold) * 0.009;
@@ -100,7 +100,7 @@ USD social_security(const Inflation &inflation, const Day &date, const Taxes::En
     // Social Security wage base — approximate for 2026, verify annually
     static constexpr auto kSSWageBase = 180000_USD;
     const USD wage_base = inflation(kReference, date, kSSWageBase);
-    return std::min(entry.income.standard, wage_base) * 0.062;
+    return std::min(entry.income.wages, wage_base) * 0.062;
 }
 
 /// IRS Uniform Lifetime Table III divisors, starting at age 73.
@@ -148,7 +148,7 @@ CalculatedTaxes calculate_taxes(const Inflation &inflation, const Taxes &taxes, 
     deduction = std::min(deduction, entry.income.total() * 0.6);
 
     // Ordinary income = wages + short-term capital gains, reduced by deduction.
-    const USD gross_ordinary = entry.income.standard + entry.income.short_term_gains;
+    const USD gross_ordinary = entry.income.wages + entry.income.standard + entry.income.short_term_gains;
     const USD ordinary_taxable = std::max(0.00_USD, gross_ordinary - deduction);
 
     // Qualified dividends and LTCG use preferential rates, stacked on top of ordinary taxable.

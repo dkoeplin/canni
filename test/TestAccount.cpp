@@ -24,7 +24,6 @@ struct TestPortfolio : Portfolio {
         : Portfolio(p, Scenario{}) {}
     void deposit(USD amount) const override { (void)cash.deposit(amount); }
     void invest() const override {}
-    bool solvent() const override { return true; }
     Cash &cash = add<Cash>("Test", 0.0_pct);
 };
 
@@ -103,7 +102,6 @@ TEST(Accounts, ProjectAppliesInterest) {
             : Portfolio(p, Scenario{}) {}
         void deposit(USD amount) const override { (void)savings.deposit(amount); }
         void invest() const override {}
-        bool solvent() const override { return true; }
         Cash &savings = add<Cash>("Test", Interest::Monthly(0.12));
     };
     InterestPortfolio accts;
@@ -145,7 +143,6 @@ TEST(Accounts, MarketReturnsOverridesAPY) {
         explicit StocksPortfolio(const Portfolio::Params &p) : Portfolio(p, Scenario{}) {}
         void deposit(USD amount) const override { (void)stocks.deposit(amount); }
         void invest() const override {}
-        bool solvent() const override { return true; }
         Stocks &stocks = add<Stocks>("Test", Interest::Monthly(0.0));
     };
     std::mt19937 rng(42);
@@ -157,4 +154,47 @@ TEST(Accounts, MarketReturnsOverridesAPY) {
     accts.project_until(Day("01/01/2025"), 1_months);
     EXPECT_GT(accts.stocks.balance(), 1150.00_USD);
     EXPECT_LT(accts.stocks.balance(), 1250.00_USD);
+}
+
+namespace {
+struct HomePortfolio : Portfolio {
+    explicit HomePortfolio(const Portfolio::Params &p = test_params()) : Portfolio(p, Scenario{}) {}
+    void deposit(USD amount) const override { (void)cash.deposit(amount); }
+    void invest() const override {}
+    Cash &cash = add<Cash>("Cash", 0.0_pct);
+    RealEstate &home = add<RealEstate>("Home", 0.0_pct);
+};
+} // namespace
+
+TEST(Accounts, ShortfallBorrowsAgainstHomeEquity) {
+    HomePortfolio p;
+    p.seed(Day("01/01/2024"));
+    p.current_entry(&p.home).balance = 500000_USD;
+    p.add<Monthly>("Expenses", Day("01/01/2024"), [&](Day) { p.withdraw("Expenses", 1000_USD); });
+    p.project_until(Day("01/01/2025"), 1_months);
+    // Liquid is negative (borrowed), but home equity keeps the projection going.
+    EXPECT_EQ(p.current_day(), Day("01/01/2025"));
+    EXPECT_LT(p.liquid(), 0_USD);
+    EXPECT_GT(p.net_worth(), 0_USD);
+}
+
+TEST(Accounts, ProjectionStopsWhenNetWorthNegative) {
+    HomePortfolio p;
+    p.seed(Day("01/01/2024"));
+    p.current_entry(&p.home).balance = 2500_USD;
+    p.add<Monthly>("Expenses", Day("01/01/2024"), [&](Day) { p.withdraw("Expenses", 1000_USD); });
+    p.project_until(Day("01/01/2025"), 1_months);
+    EXPECT_LT(p.current_day(), Day("01/01/2025"));
+    EXPECT_LT(p.net_worth(), 0_USD);
+}
+
+TEST(Accounts, LoansRepaidFromCash) {
+    HomePortfolio p;
+    p.seed(Day("01/01/2024"));
+    p.withdraw("Expense", 1000_USD);
+    EXPECT_EQ(p.liabilities.owed(), 1000_USD);
+    (void)p.cash.deposit(5000_USD);
+    p.project_once(1_months);
+    EXPECT_EQ(p.liabilities.owed(), 0_USD);
+    EXPECT_LT(p.cash.balance(), 4000_USD); // Repaid principal plus a month of interest
 }

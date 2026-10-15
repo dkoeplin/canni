@@ -25,6 +25,9 @@ template <typename P, typename X, typename XStep = X, typename Y = Day>
     requires PortfolioSubclass<P>
 struct Experiment : XYPlotOptions {
     explicit Experiment(P::Params p) : params(p) {}
+    Experiment(const Experiment &) = delete;
+    Experiment(const Experiment &&) = delete;
+    Experiment &operator=(const Experiment &) = delete;
 
     void run(const bool plot = true) {
         params.base.verbose = false;

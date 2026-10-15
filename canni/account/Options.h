@@ -42,7 +42,7 @@ struct Options : Account, OptionsSnapshot {
         USD proceeds;
     };
 
-    explicit Options(Portfolio *parent, Company company, const std::string &name, Type type, USD strike);
+    explicit Options(Portfolio *parent, const Day &grant_date, Company company, const std::string &name, Type type, USD strike);
 
     /// Parses a vesting schedule CSV and populates the vesting schedule.
     ///   Pure grant  (5 cols): row, date, new_vested, cumulative, exercised
@@ -76,15 +76,13 @@ struct Options : Account, OptionsSnapshot {
     /// Returns the number of available (vested - sold) shares on [day].
     pure Count avail(const Day &day) const { return vested(day) - sold(day); }
 
-    /// Sets the expiration of these options to [day].
-    void set_exp(const Day &day) { expires_ = day; }
+    /// Sets the expiration of these options to either the current expiration or [day], whichever is sooner.
+    void set_exp(const Day &day);
 
     void tax_gain(const Day &, const USD &) const override { /* Unrealized gains on Options are not taxable. */ }
     void tax_sale(const Day &, const USD &) const override { /* Handled directly in `sell` for now. */ }
 
-    std::shared_ptr<AccountSnapshot> save() const override {
-        return std::make_shared<OptionsSnapshot>(*this);
-    }
+    pure std::shared_ptr<AccountSnapshot> save() const override { return std::make_shared<OptionsSnapshot>(*this); }
     void restore(const AccountSnapshot &other) override {
         const auto &rhs = static_cast<const OptionsSnapshot &>(other);
         vested_ = rhs.vested_;

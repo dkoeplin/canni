@@ -10,7 +10,9 @@ namespace canni {
 USD Account::balance() const { return parent_->current_entry(this).balance; }
 
 USD Account::deposit(const USD &amount) const {
-    parent_->current_entry(this).balance += amount;
+    auto &entry = parent_->current_entry(this);
+    entry.balance += amount;
+    entry.principal += amount;
     return amount;
 }
 
@@ -86,6 +88,19 @@ void Stocks::tax_sale(const Day &date, const USD &gain) const {
     parent_->taxes.long_term(date, gain * (1.0 - dividend_yield_));
 }
 
+USD Loan::deposit(const USD& amount) const {
+    Entry &entry = parent_->current_entry(this);
+    const auto actual = std::min(-entry.balance, amount);
+    entry.balance += actual;
+    return actual;
+}
+
+USD Loan::withdraw(const USD& amount) const {
+    Entry &entry = parent_->current_entry(this);
+    entry.balance -= amount;
+    return amount;
+}
+
 void Mortgage::originate(const USD &loan) {
     const double r = params_.annual_rate / 12.0;
     const I64 n = params_.duration_years * 12;
@@ -97,7 +112,7 @@ void Mortgage::originate(const USD &loan) {
 
 std::string_view to_string(const Account::Kind kind) {
     static std::vector<std::string_view> names {
-        "Bonds", "Cash", "Mortgage", "Real Estate", "Retirement", "Stocks", "Options", "Inflation"
+        "Bonds", "Cash", "Loan", "Mortgage", "Real Estate", "Retirement", "Stocks", "Options", "Inflation"
     };
     return kind < names.size() ? names[kind] : "?";
 }

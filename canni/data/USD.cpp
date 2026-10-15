@@ -11,7 +11,10 @@ USD USD::parse(const std::string &str) {
     if (const auto decimal = std::ranges::find(tmp, '.'); decimal != tmp.end()) {
         const auto neg = !tmp.empty() && tmp[0] == '-';
         const auto str_dollars = std::string(tmp.begin(), decimal);
-        const auto str_cents = std::string(decimal + 1, tmp.end());
+        auto str_cents = std::string(decimal + 1, tmp.end());
+        while (str_cents.size() < 2) {
+            str_cents += '0';
+        }
         const I64 dollars = std::stoll(str_dollars);
         const I64 cents = std::stoll(str_cents);
         const I64 total = (std::abs(dollars)*100 + cents) * (neg ? -1 : 1);

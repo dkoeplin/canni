@@ -37,7 +37,7 @@ keep DayAndBalance min_retirement(typename P::Params params, const Scenario &sce
         params.base.history = history;
         P portfolio(params, scenario);
         portfolio.project();
-        return portfolio.inflation.inverse(portfolio.ending_day(), portfolio.liquid());
+        return portfolio.inflation.inverse(portfolio.ending_day(), portfolio.net_worth());
     };
 
     const Day &start = params.base.today;

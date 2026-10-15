@@ -26,14 +26,14 @@ TEST(MarketReturns, AtReturnsZeroAfterEnd) {
     EXPECT_DOUBLE_EQ(mr.at(Account::kStocks, 2029), 0.0);
 }
 
-TEST(MarketReturns, CumulativeReturnsZeroBeforeBaseYear) {
+TEST(MarketReturns, CumulativeReturnsOneBeforeBaseYear) {
     const auto mr = make_deterministic(0.07);
-    EXPECT_DOUBLE_EQ(mr.cumulative(Account::kStocks, 2023), 0.0);
+    EXPECT_DOUBLE_EQ(mr.cumulative(Account::kStocks, 2023), 1.0);
 }
 
-TEST(MarketReturns, CumulativeReturnsZeroAfterEnd) {
+TEST(MarketReturns, CumulativeReturnsOneAfterEnd) {
     const auto mr = make_deterministic(0.07, 2024, 5);
-    EXPECT_DOUBLE_EQ(mr.cumulative(Account::kStocks, 2029), 0.0);
+    EXPECT_DOUBLE_EQ(mr.cumulative(Account::kStocks, 2029), 1.0);
 }
 
 TEST(MarketReturns, DeterministicAtMatchesMean) {
@@ -56,7 +56,7 @@ TEST(MarketReturns, UnregisteredAssetClassReturnsZero) {
     // Only kStocks registered; kBonds should return 0.
     const auto mr = make_deterministic(0.07);
     EXPECT_DOUBLE_EQ(mr.at(Account::kBonds, 2024), 0.0);
-    EXPECT_DOUBLE_EQ(mr.cumulative(Account::kBonds, 2024), 0.0);
+    EXPECT_DOUBLE_EQ(mr.cumulative(Account::kBonds, 2024), 1.0);
 }
 
 TEST(MarketReturns, StochasticReturnsMeanConverges) {

@@ -24,7 +24,6 @@ struct TestPortfolio : Portfolio {
         : Portfolio(p, Scenario{}) {}
     void deposit(USD amount) const override { (void)cash.deposit(amount); }
     void invest() const override {}
-    bool solvent() const override { return true; }
     Cash &cash = add<Cash>("Cash", 0.0_pct);
 };
 
@@ -182,7 +181,7 @@ TEST(Taxes, MedicareBasicRate) {
     // $200,000 * 1.45% = $2,900
     TestPortfolio p;
     Taxes t;
-    t.income(Day("06/01/2026"), 200000_USD);
+    t.wages(Day("06/01/2026"), 200000_USD);
     const auto result = calculate_taxes(p.inflation, t, 2026);
     EXPECT_EQ(result.medicare, 2900_USD);
 }
@@ -192,7 +191,7 @@ TEST(Taxes, MedicareAdditionalAboveThreshold) {
     //           additional = $50,000 * 0.9% = $450 → total $4,800
     TestPortfolio p;
     Taxes t;
-    t.income(Day("06/01/2026"), 300000_USD);
+    t.wages(Day("06/01/2026"), 300000_USD);
     const auto result = calculate_taxes(p.inflation, t, 2026);
     EXPECT_EQ(result.medicare, 4800_USD);
 }
@@ -205,7 +204,7 @@ TEST(Taxes, SocialSecurityBelowWageBase) {
     // $100,000 * 6.2% = $6,200
     TestPortfolio p;
     Taxes t;
-    t.income(Day("06/01/2026"), 100000_USD);
+    t.wages(Day("06/01/2026"), 100000_USD);
     const auto result = calculate_taxes(p.inflation, t, 2026);
     EXPECT_EQ(result.social_security, 6200_USD);
 }
@@ -214,7 +213,7 @@ TEST(Taxes, SocialSecurityCappedAtWageBase) {
     // $400,000 income: capped at $180,000 wage base → $180,000 * 6.2% = $11,160
     TestPortfolio p;
     Taxes t;
-    t.income(Day("06/01/2026"), 400000_USD);
+    t.wages(Day("06/01/2026"), 400000_USD);
     const auto result = calculate_taxes(p.inflation, t, 2026);
     EXPECT_EQ(result.social_security, 11160_USD);
 }

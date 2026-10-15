@@ -18,7 +18,6 @@ struct TestPortfolio : Portfolio {
     }, Scenario{}) {}
     void deposit(USD amount) const override { (void)cash.deposit(amount); }
     void invest() const override {}
-    bool solvent() const override { return true; }
     Cash &cash = add<Cash>("Cash", 0.0_pct);
 };
 
