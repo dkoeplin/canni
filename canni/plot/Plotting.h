@@ -18,6 +18,8 @@ struct XYPlotOptions {
     std::string x_format  = "TIME";       // gnuplot format string for x-axis
     std::string y_format  = "$%.2s%c";    // gnuplot format string for left y-axis
     std::string y2_format = "$%.2s%c";    // gnuplot format string for right y-axis
+
+    std::string filename() const;
 };
 
 namespace detail {
@@ -82,6 +84,7 @@ void xy_plot(const std::vector<Series<X, Y>> &series, const XYPlotOptions &optio
         fprintf(plot, "e\n");
     }
     pclose(plot);
+    std::cout << "Wrote " << options.filename() << std::endl;
 }
 
 template <typename X, typename Y>

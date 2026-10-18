@@ -210,7 +210,7 @@ int main() {
     // ── Single verbose run ──────────────────────────────────
     MyFinances finances(kBase, rent(3000_USD));
     finances.project();
-    stacked_plot(finances.grouped_totals());
+    stacked_plot(finances.grouped_totals(), {.title = "Projected Performance"});
 
     // ── Housing comparison ──────────────────────────────────
     compare<MyFinances>(kBase, {

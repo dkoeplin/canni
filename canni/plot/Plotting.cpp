@@ -4,13 +4,21 @@
 #include <functional>
 #include <memory>
 #include <cstdio>
-
-#include <ranges>
+#include <filesystem>
+#include <regex>
 
 #include "canni/Macros.h"
 
-namespace canni::detail {
+namespace canni {
 
+std::string XYPlotOptions::filename() const {
+    const auto allowed = std::regex("[^A-Za-z0-9_-]");
+    const auto filename = regex_replace(title, allowed, "_");
+    const auto out = std::filesystem::current_path().append("out/").append(filename + ".svg");
+    return out.string();
+}
+
+namespace detail {
 std::string axis_name(Axis axis) {
     switch (axis) {
     case kX: return "x";
@@ -21,7 +29,8 @@ std::string axis_name(Axis axis) {
 }
 
 FILE *setup_plot(const XYPlotOptions &options, const bool has_y2, const bool stacked) {
-    FILE *plot = popen("gnuplot -persistent", "w");
+    std::filesystem::create_directories("out/");
+    FILE *plot = popen("gnuplot", "w");
     if (!plot) {
         std::cerr << "Failed to open gnuplot pipe" << std::endl;
         return nullptr;
@@ -30,7 +39,8 @@ FILE *setup_plot(const XYPlotOptions &options, const bool has_y2, const bool sta
     fprintf(plot, "set xlabel \"%s\"\n", options.x_title.c_str());
     fprintf(plot, "set ylabel \"%s\"\n", options.y_title.c_str());
     fprintf(plot, "set grid\n");
-    fprintf(plot, "set term qt font \"Arial\"\n");
+    fprintf(plot, "set terminal svg size 1600,900 font \"Arial\" background \"white\"\n");
+    fprintf(plot, "set output \"%s\"\n", options.filename().c_str());
     fprintf(plot, "set timefmt '%%Y-%%m-%%d'\n");
     fprintf(plot, "set ytics nomirror\n");
     if (has_y2) {
@@ -40,6 +50,7 @@ FILE *setup_plot(const XYPlotOptions &options, const bool has_y2, const bool sta
     if (stacked) {
         fprintf(plot, "set style fill transparent solid 1.0\n");
     }
+
     return plot;
 }
 
@@ -56,6 +67,7 @@ void AxisFormat<USD>::setup_axis(FILE* plot, Axis axis) {
     fprintf(plot, "set format %s '$%%.2s%%c'\n", axis_name(axis).c_str());
 }
 
-} // namespace canni::detail
+} // namespace detail
+} // namespace canni
 
 
