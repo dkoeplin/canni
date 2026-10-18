@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS (Apple Clang)
+            os: macos-latest
+          - name: Ubuntu (GCC 14)
+            os: ubuntu-24.04
+            cmake_args: -DCMAKE_C_COMPILER=gcc-14 -DCMAKE_CXX_COMPILER=g++-14
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake_args }}
+      - name: Build
+        run: cmake --build build --parallel
+      - name: Test
+        working-directory: build
+        run: ctest --output-on-failure
