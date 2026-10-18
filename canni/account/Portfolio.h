@@ -62,7 +62,7 @@ abstract struct Portfolio {
 
     struct ColumnType {
         enum Type { kIgnore, kBalance, kPrincipal };
-        constexpr explicit ColumnType(Account *account, Type type) : account(account), type(type) {}
+        constexpr explicit ColumnType(Account *acct, Type kind) : account(acct), type(kind) {}
         Account *account;
         Type type;
     };

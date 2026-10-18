@@ -17,7 +17,7 @@ struct Portfolio;
  */
 struct Scenario {
     Scenario() = default;
-    Scenario(std::string name, std::function<void(Portfolio &)> func) : name(std::move(name)), apply(std::move(func)) {}
+    Scenario(std::string label, std::function<void(Portfolio &)> func) : name(std::move(label)), apply(std::move(func)) {}
     pure Scenario operator|(const Scenario &other) const;
 
     std::string name;
@@ -31,8 +31,8 @@ struct Scenario {
 template <typename P>
     requires std::is_base_of_v<Portfolio, P>
 struct TargetedScenario : Scenario {
-    TargetedScenario(std::string name, std::function<void(P &)> func)
-        : Scenario(name, [func](Portfolio &p) { func(*static_cast<P *>(&p)); }) {}
+    TargetedScenario(std::string label, std::function<void(P &)> func)
+        : Scenario(std::move(label), [func](Portfolio &p) { func(*static_cast<P *>(&p)); }) {}
 };
 
 } // namespace canni

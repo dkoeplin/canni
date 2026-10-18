@@ -1,6 +1,7 @@
 #include "USD.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace canni {
 
