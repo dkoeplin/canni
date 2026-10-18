@@ -77,6 +77,19 @@ xy_plot<I64, double>(sims, {
 ```
 
 ![](examples/basic-monte-carlo.svg)
+
+### Parameter sweeps (`canni/tools/Experiment.h`).
+
+```c++
+const auto results = sweep_retirement<MyFinances>(kBase, values(Range<USD>{300000_USD, 1000000_USD, 100000_USD}), {
+    {"Buy (20% down)", [&](USD price) { return buy_home(kToday + 12_months, price, mortgage); }},
+    {"Buy (cash)",     [&](USD price) { return buy_home(kToday + 12_months, price, {.down_pct = 1.0}); }},
+});
+xy_plot(results.retirement, {.title = "Home Price vs. Retirement", .x_title = "Home Price"});
+write_csv(results.balance, {.title = "Home Price vs. Ending Balance", .x_title = "Home Price"});
+```
+
+Plots and CSVs are written to `out/` in the working directory.
     
 
 # Caveats

@@ -40,6 +40,8 @@ add_library(finances_lib STATIC
         canni/account/Company.h
         canni/account/Taxes.cpp
         canni/account/Taxes.h
+        canni/plot/Plotting.h
+        canni/plot/Plotting.cpp
         canni/plot/Series.h
         canni/account/MarketReturns.cpp
         canni/account/MarketReturns.h
@@ -57,11 +59,7 @@ target_compile_options(finances_lib PRIVATE -Wall -Wextra -Wpedantic -Wshadow -W
 
 function(add_example example_file)
     get_filename_component(example_name "${example_file}" NAME_WE)
-    add_executable(${example_name}
-        ${example_file}
-        canni/plot/Plotting.h
-        canni/plot/Plotting.cpp
-    )
+    add_executable(${example_name} ${example_file})
     target_link_libraries(${example_name} PRIVATE finances_lib)
     target_include_directories(${example_name} PRIVATE canni)
     target_compile_options(${example_name} PRIVATE -Wall -Wextra -Wpedantic -Wshadow -Werror)
