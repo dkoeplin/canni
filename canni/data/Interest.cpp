@@ -1,5 +1,7 @@
 #include "Interest.h"
 
+#include <cmath>
+
 #include "canni/Macros.h"
 #include "canni/data/Day.h"
 

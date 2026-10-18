@@ -1,5 +1,7 @@
 #include "MarketReturns.h"
 
+#include <cmath>
+
 namespace canni {
 
 namespace {

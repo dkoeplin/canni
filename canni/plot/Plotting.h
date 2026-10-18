@@ -1,6 +1,10 @@
 #pragma once
 
 #include <algorithm>
+#include <fstream>
+#include <iostream>
+#include <map>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -9,6 +13,10 @@
 #include "canni/data/USD.h"
 
 namespace canni {
+
+/// Returns the path to out/<title>.<extension> in the working directory, creating out/ if needed.
+/// Characters in [title] other than letters, digits, '_' and '-' are replaced with '_'.
+std::string output_path(const std::string &title, const std::string &extension);
 
 struct XYPlotOptions {
     std::string title    = "Plot";
@@ -85,6 +93,43 @@ void xy_plot(const std::vector<Series<X, Y>> &series, const XYPlotOptions &optio
     }
     pclose(plot);
     std::cout << "Wrote " << options.filename() << std::endl;
+}
+
+/// Writes [series] to out/<title>.csv with one row per X value and one column per series.
+/// Cells are left empty where a series has no point at that X value.
+template <typename X, typename Y>
+void write_csv(const std::vector<Series<X, Y>> &series, const XYPlotOptions &options = {}) {
+    const auto quote = [](const std::string &str) {
+        std::string quoted = "\"";
+        for (const char c : str) {
+            quoted += c == '"' ? "\"\"" : std::string(1, c);
+        }
+        return quoted + "\"";
+    };
+    std::map<X, std::vector<std::optional<Y>>> rows;
+    for (U64 i = 0; i < series.size(); ++i) {
+        for (const auto &[x, y] : series[i].points) {
+            auto &row = rows[x];
+            row.resize(series.size());
+            row[i] = y;
+        }
+    }
+    const std::string path = output_path(options.title, "csv");
+    std::ofstream out(path);
+    out << quote(options.x_title);
+    for (const auto &s : series) {
+        out << "," << quote(s.name);
+    }
+    out << "\n";
+    for (const auto &[x, row] : rows) {
+        out << detail::AxisFormat<X>::str(x);
+        for (const auto &y : row) {
+            out << ",";
+            if (y) out << detail::AxisFormat<Y>::str(*y);
+        }
+        out << "\n";
+    }
+    std::cout << "Wrote " << path << std::endl;
 }
 
 template <typename X, typename Y>

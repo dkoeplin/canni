@@ -24,7 +24,7 @@ struct Entry {
 };
 
 struct DatedEntry : Entry {
-    explicit DatedEntry(const Day &day, const Entry &entry) : Entry(entry), day(day) {}
+    explicit DatedEntry(const Day &date, const Entry &entry) : Entry(entry), day(date) {}
     Day day;
 };
 

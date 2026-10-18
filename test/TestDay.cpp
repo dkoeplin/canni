@@ -93,3 +93,29 @@ TEST(Day, MonthFields) {
     EXPECT_EQ(day.month(), Month::Mar);
     EXPECT_EQ(day.year(), 2024);
 }
+
+TEST(Day, ParseRejectsOutOfRangeDates) {
+    EXPECT_FALSE(Day::parse("02/31/2024").has_value());
+    EXPECT_FALSE(Day::parse("02/29/2023").has_value());
+    EXPECT_FALSE(Day::parse("13/01/2024").has_value());
+    EXPECT_FALSE(Day::parse("01/00/2024").has_value());
+    EXPECT_TRUE(Day::parse("02/29/2024").has_value());
+}
+
+TEST(Day, AddMonthsClampsToEndOfMonth) {
+    EXPECT_EQ(Day("01/31/2024") + 1_months, Day("02/29/2024"));
+    EXPECT_EQ(Day("01/31/2023") + 1_months, Day("02/28/2023"));
+    EXPECT_EQ(Day("03/31/2024") + 1_months, Day("04/30/2024"));
+    EXPECT_EQ(Day("02/29/2024") + 1_years, Day("02/28/2025"));
+    EXPECT_EQ((Day("01/31/2024") + Day::Distance{.days = 1, .months = 1}), Day("03/01/2024"));
+}
+
+TEST(Day, SubtractMonthsClampsToEndOfMonth) {
+    EXPECT_EQ(Day("03/31/2024") - 1_months, Day("02/29/2024"));
+    EXPECT_EQ(Day("03/31/2023") - 1_months, Day("02/28/2023"));
+    EXPECT_EQ(Day("02/29/2024") - 1_years, Day("02/28/2023"));
+}
+
+TEST(Day, NextYearClampsLeapDay) {
+    EXPECT_EQ(Day("02/29/2024").next_year(), Day("02/28/2025"));
+}

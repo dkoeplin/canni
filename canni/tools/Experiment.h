@@ -1,6 +1,9 @@
 #pragma once
 
 #include <functional>
+#include <string>
+#include <type_traits>
+#include <vector>
 
 #include "canni/data/Day.h"
 #include "canni/account/Portfolio.h"
@@ -16,6 +19,65 @@ struct Range {
     X max;
     Step step;
 };
+
+/// Returns the values [min, min + step, ...] up to and including [max].
+template <typename X, typename Step>
+std::vector<X> values(const Range<X, Step> &range) {
+    std::vector<X> result;
+    for (X x = range.min; x <= range.max; x += range.step) {
+        result.push_back(x);
+    }
+    return result;
+}
+
+/// A named family of scenarios, parameterized by the swept value.
+template <typename X>
+struct Variant {
+    std::string name;
+    std::function<Scenario(X)> mods;
+};
+
+/// Evaluates [metric] on each variant's scenario at each of [xs], returning one series per variant.
+/// [metric] takes a Scenario and may return any type, e.g. a Day, USD, or struct of several results.
+template <typename X, typename Metric, typename Y = std::invoke_result_t<Metric, const Scenario &>>
+std::vector<Series<X, Y>> sweep(const std::vector<X> &xs, const std::vector<Variant<X>> &variants, const Metric &metric) {
+    std::vector<Series<X, Y>> result;
+    for (const auto &variant : variants) {
+        Series<X, Y> &series = result.emplace_back();
+        series.name = variant.name;
+        for (const X &x : xs) {
+            series.points.emplace_back(x, metric(variant.mods(x)));
+        }
+    }
+    return result;
+}
+
+template <typename X>
+struct RetirementSweep {
+    std::vector<Series<X, Day>> retirement; // Earliest viable retirement date, per variant
+    std::vector<Series<X, USD>> balance;    // Ending net worth (today's dollars) when retiring on that date
+};
+
+/// Sweeps the earliest viable retirement date and corresponding ending balance for each variant.
+template <typename P, typename X>
+    requires PortfolioSubclass<P>
+RetirementSweep<X> sweep_retirement(const typename P::Params &params,
+                                    const std::vector<X> &xs,
+                                    const std::vector<Variant<X>> &variants) {
+    const auto results = sweep(xs, variants, [&](const Scenario &s) { return min_retirement<P>(params, s); });
+    RetirementSweep<X> out;
+    for (const auto &series : results) {
+        auto &days = out.retirement.emplace_back();
+        auto &balances = out.balance.emplace_back();
+        days.name = series.name;
+        balances.name = series.name;
+        for (const auto &[x, result] : series.points) {
+            days.points.emplace_back(x, result.day);
+            balances.points.emplace_back(x, result.balance);
+        }
+    }
+    return out;
+}
 
 /**
  * @struct Experiment

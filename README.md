@@ -7,7 +7,7 @@ it can be a decent start, but it shouldn't be treated as the end of the story.
 
 # Setup
 
-**Prerequisites**: a C++23-capable compiler (Clang 16+ or GCC 13+), CMake 3.20+, and optionally gnuplot for plots.
+**Prerequisites**: a C++23-capable compiler (Clang 16+ or GCC 13+), CMake 3.24+, and optionally gnuplot for plots.
 
 e.g. on macOS with Homebrew:
 ```sh
@@ -77,6 +77,19 @@ xy_plot<I64, double>(sims, {
 ```
 
 ![](examples/basic-monte-carlo.svg)
+
+### Parameter sweeps (`canni/tools/Experiment.h`).
+
+```c++
+const auto results = sweep_retirement<MyFinances>(kBase, values(Range<USD>{300000_USD, 1000000_USD, 100000_USD}), {
+    {"Buy (20% down)", [&](USD price) { return buy_home(kToday + 12_months, price, mortgage); }},
+    {"Buy (cash)",     [&](USD price) { return buy_home(kToday + 12_months, price, {.down_pct = 1.0}); }},
+});
+xy_plot(results.retirement, {.title = "Home Price vs. Retirement", .x_title = "Home Price"});
+write_csv(results.balance, {.title = "Home Price vs. Ending Balance", .x_title = "Home Price"});
+```
+
+Plots and CSVs are written to `out/` in the working directory.
     
 
 # Caveats

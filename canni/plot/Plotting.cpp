@@ -11,12 +11,15 @@
 
 namespace canni {
 
-std::string XYPlotOptions::filename() const {
+std::string output_path(const std::string &title, const std::string &extension) {
+    std::filesystem::create_directories("out/");
     const auto allowed = std::regex("[^A-Za-z0-9_-]");
     const auto filename = regex_replace(title, allowed, "_");
-    const auto out = std::filesystem::current_path().append("out/").append(filename + ".svg");
+    const auto out = std::filesystem::current_path().append("out/").append(filename + "." + extension);
     return out.string();
 }
+
+std::string XYPlotOptions::filename() const { return output_path(title, "svg"); }
 
 namespace detail {
 std::string axis_name(Axis axis) {
@@ -29,7 +32,6 @@ std::string axis_name(Axis axis) {
 }
 
 FILE *setup_plot(const XYPlotOptions &options, const bool has_y2, const bool stacked) {
-    std::filesystem::create_directories("out/");
     FILE *plot = popen("gnuplot", "w");
     if (!plot) {
         std::cerr << "Failed to open gnuplot pipe" << std::endl;

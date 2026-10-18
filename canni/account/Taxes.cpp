@@ -152,7 +152,9 @@ CalculatedTaxes calculate_taxes(const Inflation &inflation, const Taxes &taxes, 
     const USD ordinary_taxable = std::max(0.00_USD, gross_ordinary - deduction);
 
     // Qualified dividends and LTCG use preferential rates, stacked on top of ordinary taxable.
-    const USD preferential = entry.income.dividends + entry.income.long_term_gains;
+    // Any deduction left over after zeroing out ordinary income reduces preferential income.
+    const USD leftover_deduction = std::max(0.00_USD, deduction - gross_ordinary);
+    const USD preferential = std::max(0.00_USD, entry.income.dividends + entry.income.long_term_gains - leftover_deduction);
 
     result.year            = year;
     result.federal_income  = income_tax(inflation, date, ordinary_taxable);

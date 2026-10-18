@@ -62,8 +62,22 @@ Entry Options::estimate(const Day &day) const {
     return Entry {.principal = 0.00_USD, .balance = fmv * (iso + nso) };
 }
 
+Options::Count Options::sellable(const Day &day) const {
+    Count result = avail(day);
+    for (auto iter = sold_.upper_bound(day); iter != sold_.end(); ++iter) {
+        const auto &[later, sold_by_then] = *iter;
+        if (expires_ && later >= *expires_) break;
+        const Count left = vested(later) - sold_by_then;
+        result.iso = std::min(result.iso, left.iso);
+        result.nso = std::min(result.nso, left.nso);
+    }
+    result.iso = std::max<I64>(0, result.iso);
+    result.nso = std::max<I64>(0, result.nso);
+    return result;
+}
+
 Options::Sale Options::sell(const Day day, const USD &price, Count count, bool cashless) {
-    const auto available = avail(day);
+    const auto available = sellable(day);
     count.iso = std::min(available.iso, count.iso);
     count.nso = std::min(available.nso, count.nso);
 

@@ -76,6 +76,10 @@ struct Options : Account, OptionsSnapshot {
     /// Returns the number of available (vested - sold) shares on [day].
     pure Count avail(const Day &day) const { return vested(day) - sold(day); }
 
+    /// Returns the number of shares that can be sold on [day] without exceeding the vested shares on any date,
+    /// including sales already recorded after [day] (e.g. when a sale is back-dated to an earlier event).
+    pure Count sellable(const Day &day) const;
+
     /// Sets the expiration of these options to either the current expiration or [day], whichever is sooner.
     void set_exp(const Day &day);
 
