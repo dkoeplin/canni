@@ -35,8 +35,8 @@ public:
     USD &operator+=(const USD &rhs) { cents_ += rhs.cents_; return *this; }
     USD &operator-=(const USD &rhs) { cents_ -= rhs.cents_; return *this; }
 
-    __header_always_inline auto operator<=>(const USD &) const = default;
-    __header_always_inline bool operator==(const USD &) const = default;
+    pure auto operator<=>(const USD &) const = default;
+    pure bool operator==(const USD &) const = default;
 
     pure std::string to_string() const;
 
