@@ -98,4 +98,4 @@ You should never make financial choices based solely on the output of this tool!
 While no one can truly predict the future, this tool in particular is provided as-is, and makes 
 no guarantees on accuracy. Latent modeling bugs can potentially bias estimates significantly. 
 
-Parts of this codebase's source and test files were produced using Anthropic's Claude (Sonnet 4.6).
+Parts of this codebase's source and test files were produced using Anthropic's Claude (Sonnet 4.6, Opus 5.5).
