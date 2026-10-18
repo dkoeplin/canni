@@ -235,7 +235,7 @@ void Portfolio::sell_vested_options(const Company &company, const Day &day, cons
     for (Options *options : options_list) {
         if (remain <= 0) break;
         if (options->strike() >= price) continue; // Don't sell options that are underwater
-        const Options::Count total = options->vested(day) - options->sold(day);
+        const Options::Count total = options->sellable(day);
         Options::Count count;
         count.nso = std::min(remain, total.nso);
         remain -= count.nso;

@@ -90,6 +90,38 @@ TEST(Options, WithSaleClampsToVested) {
     EXPECT_EQ(opts.avail(Day("06/01/2024")).nso, 0);
 }
 
+TEST(Options, BackdatedSaleCannotResellLaterSale) {
+    TestPortfolio p;
+    auto &opts = p.add<Options>(Day("01/01/2023"), kTestCo, "Test", Options::kNSO, 5.00_USD);
+    write_nso_csv("/tmp/test_opts_backdate.tsv", "1\tJan 01 2024\t100\t100\t0\n");
+    opts.load("/tmp/test_opts_backdate.tsv");
+    p.seed(Day("01/01/2024"));
+
+    // Sell everything in November, then record a sale dated earlier, in October.
+    (void)opts.sell(Day("11/01/2024"), 15.00_USD, {.nso = 100});
+    const auto backdated = opts.sell(Day("10/01/2024"), 15.00_USD, {.nso = 100});
+    EXPECT_EQ(backdated.proceeds, 0_USD);
+    EXPECT_EQ(opts.sold(Day("11/01/2024")).nso, 100);
+}
+
+TEST(Options, BackdatedSaleAllowedWithinLaterVesting) {
+    TestPortfolio p;
+    auto &opts = p.add<Options>(Day("01/01/2023"), kTestCo, "Test", Options::kNSO, 5.00_USD);
+    write_nso_csv("/tmp/test_opts_backdate2.tsv",
+        "1\tJan 01 2024\t50\t50\t0\n"
+        "2\tSep 01 2024\t50\t100\t0\n");
+    opts.load("/tmp/test_opts_backdate2.tsv");
+    p.seed(Day("01/01/2024"));
+
+    // 60 sold in October leaves room for 40 of the 50 vested by June.
+    (void)opts.sell(Day("10/01/2024"), 15.00_USD, {.nso = 60});
+    EXPECT_EQ(opts.sellable(Day("06/01/2024")).nso, 40);
+    (void)opts.sell(Day("06/01/2024"), 15.00_USD, {.nso = 50});
+    EXPECT_EQ(opts.sold(Day("06/01/2024")).nso, 40);
+    EXPECT_EQ(opts.sold(Day("10/01/2024")).nso, 100);
+    EXPECT_EQ(opts.sellable(Day("10/01/2024")).nso, 0);
+}
+
 // ────────────────────────────────────────────────────────────
 // Options snapshot round-trip
 // ────────────────────────────────────────────────────────────
