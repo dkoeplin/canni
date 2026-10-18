@@ -39,8 +39,10 @@ Entry Investment<K>::project(const DatedEntry &prev, const Day &next) const {
     if (const auto *returns = parent_->market_returns()) {
         effective = Interest(interest_.type(), returns->at(kind(), next.year()));
     }
-    const USD initial = effective.compounds() ? prev.balance : prev.principal;
-    const USD new_bal = effective.estimate(prev.day, next, initial);
+    // Simple interest accrues on principal only, but adds to the existing balance each step.
+    const USD new_bal = effective.compounds()
+        ? effective.estimate(prev.day, next, prev.balance)
+        : prev.balance + effective.estimate(prev.day, next, prev.principal) - prev.principal;
     const USD delta   = new_bal - prev.balance;
     Entry entry;
     entry.principal = prev.principal;
