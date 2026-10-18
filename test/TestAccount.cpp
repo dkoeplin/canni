@@ -216,3 +216,16 @@ TEST(Accounts, LoansRepaidFromCash) {
     EXPECT_EQ(p.liabilities.owed(), 0_USD);
     EXPECT_LT(p.cash.balance(), 4000_USD); // Repaid principal plus a month of interest
 }
+
+TEST(Accounts, LoanInterestProratedByStep) {
+    auto params = test_params();
+    params.loan_apy = 0.10;
+    for (const auto &[step, interest] : {std::pair{1_months, 10_USD}, std::pair{1_years, 120_USD}}) {
+        HomePortfolio p(params);
+        p.seed(Day("01/01/2024"));
+        p.withdraw("Expense", 1200_USD);
+        (void)p.cash.deposit(5000_USD);
+        p.project_once(step);
+        EXPECT_EQ(p.cash.balance(), 5000_USD - 1200_USD - interest);
+    }
+}

@@ -153,9 +153,10 @@ Portfolio &Portfolio::project_once(const Day::Distance step) {
     }
     dates_.push_back(next_day);
 
-    // Charge any expenses associated with loans
+    // Charge any expenses associated with loans, prorated by the step length
+    const F64 step_years = static_cast<F64>(step.years) + static_cast<F64>(step.months) / 12.0 + static_cast<F64>(step.days) / 365.0;
     for (const auto &loan : get<Loan>()) {
-        const auto charge = (loan.owed() * loan.apy_) / 12;
+        const auto charge = loan.owed() * (loan.apy_ * step_years);
         withdraw(loan.name(), charge);
     }
 

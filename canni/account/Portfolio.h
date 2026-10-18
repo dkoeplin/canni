@@ -31,7 +31,7 @@ abstract struct Portfolio {
     struct Params {
         /// Market assumptions
         Interest avg_inflation_rate;
-        double loan_apy = 0.10; // 10%
+        double loan_apy = 0.08; // Rate for borrowing to cover shortfalls, roughly a HELOC
 
         /// Important dates
         Day birth;  // Birth date of user
