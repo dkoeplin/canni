@@ -43,7 +43,8 @@ template <typename X, typename Metric, typename Y = std::invoke_result_t<Metric,
 std::vector<Series<X, Y>> sweep(const std::vector<X> &xs, const std::vector<Variant<X>> &variants, const Metric &metric) {
     std::vector<Series<X, Y>> result;
     for (const auto &variant : variants) {
-        Series<X, Y> &series = result.emplace_back(Series<X, Y>{.name = variant.name});
+        Series<X, Y> &series = result.emplace_back();
+        series.name = variant.name;
         for (const X &x : xs) {
             series.points.emplace_back(x, metric(variant.mods(x)));
         }
@@ -66,8 +67,10 @@ RetirementSweep<X> sweep_retirement(const typename P::Params &params,
     const auto results = sweep(xs, variants, [&](const Scenario &s) { return min_retirement<P>(params, s); });
     RetirementSweep<X> out;
     for (const auto &series : results) {
-        auto &days = out.retirement.emplace_back(Series<X, Day>{.name = series.name});
-        auto &balances = out.balance.emplace_back(Series<X, USD>{.name = series.name});
+        auto &days = out.retirement.emplace_back();
+        auto &balances = out.balance.emplace_back();
+        days.name = series.name;
+        balances.name = series.name;
         for (const auto &[x, result] : series.points) {
             days.points.emplace_back(x, result.day);
             balances.points.emplace_back(x, result.balance);
