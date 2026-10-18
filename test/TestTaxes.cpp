@@ -242,3 +242,14 @@ TEST(Taxes, LTCGStacksOnOrdinaryIncome) {
     const auto result = calculate_taxes(p.inflation, t, 2026);
     EXPECT_EQ(result.ltcg, 5880_USD);
 }
+
+TEST(Taxes, LeftoverDeductionReducesLTCG) {
+    // No ordinary income, LTCG = $150,000. The $32,000 standard deduction carries over to LTCG:
+    // taxable LTCG = $118,000 → $100,800 at 0%, $17,200 at 15% = $2,580
+    TestPortfolio p;
+    Taxes t;
+    t.long_term(Day("06/01/2026"), 150000_USD);
+    const auto result = calculate_taxes(p.inflation, t, 2026);
+    EXPECT_EQ(result.federal_income, 0_USD);
+    EXPECT_EQ(result.ltcg, 2580_USD);
+}
