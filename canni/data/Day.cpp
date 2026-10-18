@@ -12,6 +12,22 @@ pure Day::Distance Day::Distance::operator/(I64 d) const {
     return { .days = days / d, .months = m % 12, .years = m / 12 };
 }
 
+namespace {
+
+bool is_leap_year(const I64 year) { return (year % 4 == 0 && year % 100 != 0) || year % 400 == 0; }
+
+/// Returns the number of days in the zero-based [month] of [year].
+I64 days_in_month(const I64 month, const I64 year) {
+    static constexpr I64 kDays[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+    return month == 1 && is_leap_year(year) ? 29 : kDays[month];
+}
+
+bool is_valid(const I64 day, const I64 month, const I64 year) {
+    return month >= 0 && month < 12 && day >= 1 && day <= days_in_month(month, year);
+}
+
+} // namespace
+
 std::optional<Day> Day::parse(std::string_view str, const std::optional<std::string>& format) {
     if (!format.has_value()) {
         const auto s0 = str.find('/');
@@ -21,6 +37,7 @@ std::optional<Day> Day::parse(std::string_view str, const std::optional<std::str
         const I64 month = std::stoi(std::string(str.substr(0, s0))) - 1;
         const I64 day = std::stoi(std::string(str.substr(s0 + 1, s1 - s0)));
         const I64 year = std::stoi(std::string(str.substr(s1 + 1, str.size() - s1)));
+        return_if(!is_valid(day, month, year), std::nullopt);
         return Day(day, static_cast<Month>(month), year);
     }
 
@@ -29,6 +46,7 @@ std::optional<Day> Day::parse(std::string_view str, const std::optional<std::str
     std::istringstream ss (s);
     ss >> std::get_time(&date, format->c_str());
     return_if(ss.fail(), std::nullopt);
+    return_if(!is_valid(date.tm_mday, date.tm_mon, date.tm_year + 1900), std::nullopt);
     return Day(date.tm_mday, static_cast<Month>(date.tm_mon), date.tm_year + 1900);
 }
 
@@ -64,6 +82,7 @@ pure Day Day::next_month() const {
 pure Day Day::next_year() const {
     Day next = *this;
     next.year_ += 1;
+    next.day_ = std::min(next.day_, days_in_month(next.month_, next.year_)); // Feb 29 -> Feb 28
     return next;
 }
 
@@ -94,6 +113,7 @@ pure Day Day::operator+(const Distance &duration) const {
     Day next = *this;
     next.month_ = (month_ + duration.months) % 12;
     next.year_ += duration.years + (month_ + duration.months) / 12;
+    next.day_ = std::min(next.day_, days_in_month(next.month_, next.year_)); // e.g. Jan 31 + 1 month -> Feb 28
     if (duration.days != 0)
         next = from_jdn(to_jdn(next.year_, next.month_ + 1, next.day_) + duration.days);
     return next;
@@ -104,6 +124,7 @@ pure Day Day::operator-(const Distance &duration) const {
     const I64 total_months = month_ - duration.months;
     next.month_ = ((total_months % 12) + 12) % 12;
     next.year_ += duration.years * -1 + (total_months - next.month_) / 12;
+    next.day_ = std::min(next.day_, days_in_month(next.month_, next.year_)); // e.g. Mar 31 - 1 month -> Feb 28
     if (duration.days != 0)
         next = from_jdn(to_jdn(next.year_, next.month_ + 1, next.day_) - duration.days);
     return next;
