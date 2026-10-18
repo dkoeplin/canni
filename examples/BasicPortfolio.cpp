@@ -105,11 +105,6 @@ struct MyFinances : Portfolio {
         });
     }
 
-    USD liquid() const override {
-        // Liquid assets only — exclude real estate and its offsetting mortgage liability.
-        return total() - get<RealEstate>().balance() - get<Mortgage>().balance();
-    }
-
     void deposit(const USD amount) const override { (void)checking.deposit(amount); }
 
     void invest() const override {
