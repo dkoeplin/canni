@@ -50,6 +50,22 @@ TEST(USD, ParseDollarSign) {
     EXPECT_EQ(USD::parse("$-50.00"), USD::floor(-50.0));
 }
 
+TEST(USD, ParseRoundsExtraDecimals) {
+    EXPECT_EQ(USD::parse("1.234"), USD::floor(1.23));
+    EXPECT_EQ(USD::parse("1.235"), USD::floor(1.24));
+    EXPECT_EQ(USD::parse("1.999"), USD::dollars(2));
+    EXPECT_EQ(USD::parse("-1.235"), USD::floor(-1.24));
+}
+
+TEST(USD, ParseMissingDollars) {
+    EXPECT_EQ(USD::parse(".5"), USD::floor(0.50));
+    EXPECT_EQ(USD::parse("-.25"), USD::floor(-0.25));
+}
+
+TEST(USD, ParseThousandsSeparators) {
+    EXPECT_EQ(USD::parse("$1,234,567.89"), USD::floor(1234567.89));
+}
+
 TEST(USD, ToString) {
     EXPECT_EQ(USD::dollars(0).to_string(), "$0.00");
     EXPECT_EQ(USD::dollars(1).to_string(), "$1.00");
