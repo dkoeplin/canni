@@ -1,14 +1,18 @@
-cmake_minimum_required(VERSION 4.0)
+cmake_minimum_required(VERSION 3.24)
 project(finances)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+endif()
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(FetchContent)
 FetchContent_Declare(
     googletest
     DOWNLOAD_EXTRACT_TIMESTAMP OFF
-    URL https://github.com/google/googletest/archive/refs/heads/main.zip
+    URL https://github.com/google/googletest/archive/refs/tags/v1.18.0.zip
+    URL_HASH SHA256=63b9c77751a5b8f492486005f67533fdc58682b67476fcb91650be5958d5195a
 )
 FetchContent_MakeAvailable(googletest)
 
@@ -49,7 +53,7 @@ add_library(finances_lib STATIC
 )
 target_link_libraries(finances_lib PUBLIC)
 target_include_directories(finances_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_compile_options(finances_lib PRIVATE -O0 -Wall -Wextra -Wpedantic -Wshadow -Werror)
+target_compile_options(finances_lib PRIVATE -Wall -Wextra -Wpedantic -Wshadow -Werror)
 
 function(add_example example_file)
     get_filename_component(example_name "${example_file}" NAME_WE)
@@ -60,7 +64,7 @@ function(add_example example_file)
     )
     target_link_libraries(${example_name} PRIVATE finances_lib)
     target_include_directories(${example_name} PRIVATE canni)
-    target_compile_options(${example_name} PRIVATE -O0 -Wall -Wextra -Wpedantic -Wshadow -Werror)
+    target_compile_options(${example_name} PRIVATE -Wall -Wextra -Wpedantic -Wshadow -Werror)
 endfunction()
 
 add_example(examples/BasicPortfolio.cpp)

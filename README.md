@@ -7,7 +7,7 @@ it can be a decent start, but it shouldn't be treated as the end of the story.
 
 # Setup
 
-**Prerequisites**: a C++23-capable compiler (Clang 16+ or GCC 13+), CMake 3.20+, and optionally gnuplot for plots.
+**Prerequisites**: a C++23-capable compiler (Clang 16+ or GCC 13+), CMake 3.24+, and optionally gnuplot for plots.
 
 e.g. on macOS with Homebrew:
 ```sh
