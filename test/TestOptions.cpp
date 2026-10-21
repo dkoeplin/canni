@@ -122,6 +122,42 @@ TEST(Options, BackdatedSaleAllowedWithinLaterVesting) {
     EXPECT_EQ(opts.sellable(Day("10/01/2024")).nso, 0);
 }
 
+TEST(Options, NSOSpreadTaxedAsWages) {
+    TestPortfolio p;
+    auto &opts = p.add<Options>(Day("01/01/2023"), kTestCo, "Test", Options::kNSO, 5.00_USD);
+    write_nso_csv("/tmp/test_opts_nso_tax.tsv", "1\tJan 01 2024\t100\t100\t0\n");
+    opts.load("/tmp/test_opts_nso_tax.tsv");
+    p.seed(Day("01/01/2024"));
+
+    // FMV is $10, so the spread is $5 x 100 = $500 and the gain is $5 x 100 = $500.
+    const auto sale = opts.sell(Day("06/01/2024"), 15.00_USD, {.nso = 100});
+    const auto entry = p.taxes.get(Day("06/01/2024"));
+    EXPECT_EQ(entry.income.wages, 500_USD);
+    EXPECT_EQ(entry.income.standard, 0_USD);
+    EXPECT_EQ(entry.income.short_term_gains, 500_USD);
+    EXPECT_EQ(entry.paid.standard, 110_USD);
+    EXPECT_EQ(entry.paid.medicare, 11.75_USD);
+    EXPECT_EQ(sale.costs, 500_USD + 110_USD + 11.75_USD);
+}
+
+TEST(Options, ISOSpreadTaxedAsStandardIncome) {
+    TestPortfolio p;
+    auto &opts = p.add<Options>(Day("01/01/2023"), kTestCo, "Test", Options::kISO, 5.00_USD);
+    write_nso_csv("/tmp/test_opts_iso_tax.tsv", "1\tJan 01 2024\t100\t100\t0\n");
+    opts.load("/tmp/test_opts_iso_tax.tsv");
+    p.seed(Day("01/01/2024"));
+
+    // Same-day ISO sales are disqualifying dispositions: ordinary income, no FICA, no withholding.
+    const auto sale = opts.sell(Day("06/01/2024"), 15.00_USD, {.iso = 100});
+    const auto entry = p.taxes.get(Day("06/01/2024"));
+    EXPECT_EQ(entry.income.wages, 0_USD);
+    EXPECT_EQ(entry.income.standard, 500_USD);
+    EXPECT_EQ(entry.income.short_term_gains, 500_USD);
+    EXPECT_EQ(entry.paid.standard, 0_USD);
+    EXPECT_EQ(entry.paid.medicare, 0_USD);
+    EXPECT_EQ(sale.costs, 500_USD);
+}
+
 // ────────────────────────────────────────────────────────────
 // Options snapshot round-trip
 // ────────────────────────────────────────────────────────────

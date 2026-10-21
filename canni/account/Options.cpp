@@ -90,20 +90,22 @@ Options::Sale Options::sell(const Day day, const USD &price, Count count, bool c
 
     const USD fmv = company_.fmv_at(day);
 
-    // ISO and NSO have essentially the same tax implications for same-day sales, just add them here.
     const I64 n = count.iso + count.nso;
-    const USD spread = (fmv - strike_) * n;
+    const USD iso_spread = (fmv - strike_) * count.iso;
+    const USD nso_spread = (fmv - strike_) * count.nso;
     const USD gain = (price - fmv) * n;
 
     Taxes &taxes = parent_->taxes;
-    // Spread (FMV - Strike) is taxed as standard income.
-    taxes.wages(day, spread);
+    // NSO spread (FMV - Strike) is taxed as wages, including FICA.
+    taxes.wages(day, nso_spread);
+    // ISO spread is a disqualifying disposition for same-day sales: taxed as standard income, exempt from FICA.
+    taxes.income(day, iso_spread);
     // Gain (Sale - FMV) is taxed as short term capital gains.
     taxes.short_term(day, gain);
 
-    // Estimate withholding for supplemental income.
-    const auto withholding = std::min(1e6_USD, spread) * 0.22 + std::max(0_USD, spread - 1e6_USD) * 0.37;
-    const auto medicare = spread * 0.0235;
+    // Estimate withholding for supplemental income. ISOs have no required withholding.
+    const auto withholding = std::min(1e6_USD, nso_spread) * 0.22 + std::max(0_USD, nso_spread - 1e6_USD) * 0.37;
+    const auto medicare = nso_spread * 0.0235;
     taxes.withholding(day, withholding);
     taxes.medicare(day, medicare);
     const auto costs = strike_ * n + withholding + medicare;
