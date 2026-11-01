@@ -237,10 +237,14 @@ void Portfolio::sell_vested_options(const Company &company, const Day &day, cons
         if (options->strike() >= price) continue; // Don't sell options that are underwater
         const Options::Count total = options->sellable(day);
         Options::Count count;
-        count.nso = std::min(remain, total.nso);
-        remain -= count.nso;
+        // TODO: May want to make this configurable based on an optional parameter.
+        // In same day sales, ISOs only have two small advantages over NSOs:
+        // - No mandatory withholding (but taxes should still normally be paid via estimated quarterly payments)
+        // - No FICA (medicare, social security) federal taxes
         count.iso = std::min(remain, total.iso);
         remain -= count.iso;
+        count.nso = std::min(remain, total.nso);
+        remain -= count.nso;
         const auto inst = options->sell(day, price, count, true);
         if (params_.verbose)
             std::cout << "  " << options->name() << ":" << count
